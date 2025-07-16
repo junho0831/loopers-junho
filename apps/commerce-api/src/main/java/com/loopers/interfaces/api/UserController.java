@@ -31,16 +31,13 @@ public class UserController {
             return ResponseEntity.status(e.getErrorType().getStatus()).build();
         }
     }
-
-    @GetMapping("/{userId}")
-    public ResponseEntity<User> getUser(@PathVariable String userId) {
-        User user = userService.findUser(userId);
-
-        if (user == null) {
-            return ResponseEntity.notFound().build();
+    @GetMapping("/me")
+    public ResponseEntity<User> me(@RequestHeader("User-Id") String userId) {
+        try {
+            User user = userService.findUser(userId);
+            return ResponseEntity.ok(user);
+        } catch (CoreException e) {
+            return ResponseEntity.status(e.getErrorType().getStatus()).build();
         }
-
-        return ResponseEntity.ok(user);
     }
-
 }

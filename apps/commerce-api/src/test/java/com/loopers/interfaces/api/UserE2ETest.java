@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 class UserE2ETest {
 
     private static final String ENDPOINT_REGISTER = "/api/users/register";
+    private static final String ENDPOINT_GET_USER = "/api/users/me";
 
     @Autowired
     private TestRestTemplate testRestTemplate;
@@ -87,6 +88,74 @@ class UserE2ETest {
             assertAll(
                     () -> assertTrue(response.getStatusCode().is4xxClientError()),
                     () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST)
+            );
+        }
+    }
+
+    @DisplayName("GET /api/users/me")
+    @Nested
+    class GetUser {
+
+        @DisplayName("내 정보 조회에 성공할 경우, 해당하는 유저 정보를 응답으로 반환한다")
+        @Test
+        void getUser_WithExistingId_ReturnsUserInfo() {
+            // given
+            String userId = "testUser";
+            User existingUser = new User(userId, "test@email.com", "1990-01-01", Gender.MALE);
+
+            when(userService.findUser(userId)).thenReturn(existingUser);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Id", userId);
+            HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+            // when
+            ResponseEntity<User> response = testRestTemplate.exchange(
+                    ENDPOINT_GET_USER,
+                    HttpMethod.GET,
+                    httpEntity,
+                    User.class
+            );
+
+            // then
+            assertAll(
+                    () -> {
+                        System.out.println("Status Code: " + response.getStatusCode());
+                        System.out.println("Response Body: " + response.getBody());
+                        assertTrue(response.getStatusCode().is2xxSuccessful());
+                    },
+                    () -> assertThat(response.getBody()).isNotNull(),
+                    () -> assertThat(response.getBody().getUserId()).isEqualTo(userId),
+                    () -> assertThat(response.getBody().getEmail()).isEqualTo("test@email.com"),
+                    () -> assertThat(response.getBody().getBirthday().toString()).isEqualTo("1990-01-01"),
+                    () -> assertThat(response.getBody().getGender()).isEqualTo(Gender.MALE)
+            );
+        }
+        @DisplayName("존재하지 않는 ID로 조회할 경우, 404 Not Found 응답을 반환한다")
+        @Test
+        void getUser_WithNonExistingId_ReturnsNotFound() {
+            // given
+            String nonExistingUserId = "nonExistingUser";
+
+            when(userService.findUser(nonExistingUserId))
+                    .thenThrow(new CoreException(ErrorType.USER_NOT_FOUND, "사용자를 찾을 수 없습니다"));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Id", nonExistingUserId);
+            HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+            // when
+            ResponseEntity<String> response = testRestTemplate.exchange(
+                    ENDPOINT_GET_USER,
+                    HttpMethod.GET,
+                    httpEntity,
+                    String.class
+            );
+
+            // then
+            assertAll(
+                    () -> assertTrue(response.getStatusCode().is4xxClientError()),
+                    () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND)
             );
         }
     }
