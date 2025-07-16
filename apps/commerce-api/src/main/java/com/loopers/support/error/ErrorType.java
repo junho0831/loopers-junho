@@ -25,7 +25,10 @@ public enum ErrorType {
     INVALID_BIRTHDAY_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_BIRTHDAY_FORMAT", "생년월일은 yyyy-MM-dd 형식이어야 합니다"),
     INVALID_CHARGE_AMOUNT(HttpStatus.BAD_REQUEST, "INVALID_CHARGE_AMOUNT", "충전 금액은 0보다 큰 값이어야 합니다"),
     INVALID_GENDER(HttpStatus.BAD_REQUEST, "INVALID_GENDER", "성별을 선택해주세요"),
-    USER_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER_ALREADY_EXISTS", "이미 가입된 ID입니다");
+    USER_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER_ALREADY_EXISTS", "이미 가입된 ID입니다"),
+
+    //내 정보
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다");
 
     private final HttpStatus status;
     private final String code;
