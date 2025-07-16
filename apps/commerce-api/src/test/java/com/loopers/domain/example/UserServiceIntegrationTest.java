@@ -67,7 +67,7 @@ public class UserServiceIntegrationTest {
 
     @Test
     @DisplayName("해당 ID의 회원이 존재할 경우, 회원 정보가 반환된다")
-    public void findUser_WithExistingId_ReturnsUser() {
+    public void findUser_WithExistingId_ReturnUser() {
         // given
         String userId = "testUser";
         User existingUser = new User(userId, "test@email.com", "1990-01-01", Gender.MALE);
@@ -87,18 +87,17 @@ public class UserServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("해당 ID의 회원이 존재하지 않을 경우, 예외가 발생한다")
-    public void findUser_WithNonExistingId_ThrowsException() {
+    @DisplayName("해당 ID의 회원이 존재하지 않을 경우, null이 반환된다.")
+    public void findUser_WithNonExistingId_ReturnsNull() {
         // given
-        String userid = "userid";
-        when(userRepository.findByUserId(userid)).thenReturn(Optional.empty());
+        String userId = "testUser";
+        when(userRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
-        // when & then
-        CoreException exception = assertThrows(CoreException.class, () -> {
-            userService.findUser(userid);
-        });
+        // when
+        User result = userService.findUser(userId);
 
-        assertEquals("사용자를 찾을 수 없습니다", exception.getMessage());
-        verify(userRepository, times(1)).findByUserId(userid);
+        // then
+        assertNull(result);
+        verify(userRepository, times(1)).findByUserId(userId);
     }
 }

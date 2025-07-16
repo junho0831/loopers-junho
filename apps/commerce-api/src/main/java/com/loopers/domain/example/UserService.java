@@ -28,7 +28,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public User findUser(String userId) {
         return userRepository.findByUserId(userId)
-                .orElseThrow(() -> new CoreException(ErrorType.USER_NOT_FOUND));
+                .orElse(null);
     }
 
 }
