@@ -4,6 +4,7 @@ import com.loopers.domain.example.UserService;
 import com.loopers.domain.example.User;
 import com.loopers.support.error.CoreException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -40,4 +41,22 @@ public class UserController {
             return ResponseEntity.status(e.getErrorType().getStatus()).build();
         }
     }
+
+
+    @GetMapping("/points")
+    public ResponseEntity<Integer> points(@RequestHeader("User-Id") String userId) {
+        try {
+            int userPoint = userService.findUserPoint(userId);
+            return ResponseEntity.ok(userPoint);
+        } catch (CoreException e) {
+            return ResponseEntity.status(e.getErrorType().getStatus()).build();
+        }
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<Void> handleMissingHeader(MissingRequestHeaderException e) {
+        return ResponseEntity.badRequest().build(); // 400 반환
+    }
 }
+
+
