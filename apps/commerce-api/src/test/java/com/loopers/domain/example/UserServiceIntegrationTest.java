@@ -100,4 +100,37 @@ public class UserServiceIntegrationTest {
         assertNull(result);
         verify(userRepository, times(1)).findByUserId(userId);
     }
+    @Test
+    @DisplayName("해당 ID 의 회원이 존재할 경우, 보유 포인트가 반환된다.")
+    public void findUser_WithExistingId_ReturPoint(){
+        // given
+        String userId = "testUser";
+        int expectedPoint = 1000;
+
+        when(userRepository.findUserPointByUserId(userId)).thenReturn(expectedPoint);
+
+        // when
+        int actualPoint = userService.findUserPoint(userId);
+
+        // then
+        assertEquals(expectedPoint, actualPoint);
+        verify(userRepository, times(1)).findUserPointByUserId(userId);
+    }
+
+    @Test
+    @DisplayName("해당 ID의 회원이 존재하지 않을 경우, null이 반환된다.")
+    public void findUserPoint_WithNonExistingId_ReturnsNull() {
+        // given
+        String userId = "testUser";
+
+        //when
+        when(userRepository.findByUserId(userId)).thenReturn(Optional.empty());
+
+        // when
+        User user = userService.findUser(userId);
+
+        // then
+        assertNull(user);
+    }
+
 }

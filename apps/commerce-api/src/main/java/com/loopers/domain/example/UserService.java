@@ -31,4 +31,8 @@ public class UserService {
                 .orElse(null);
     }
 
+    @Transactional(readOnly = true)
+    public int findUserPoint(String userId) {
+        return userRepository.findUserPointByUserId(userId);
+    }
 }
