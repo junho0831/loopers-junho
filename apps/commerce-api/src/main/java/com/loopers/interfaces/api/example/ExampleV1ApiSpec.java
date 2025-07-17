@@ -17,3 +17,4 @@ public interface ExampleV1ApiSpec {
         Long exampleId
     );
 }
+
