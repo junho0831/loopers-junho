@@ -115,7 +115,7 @@ public class User extends BaseEntity {
         }
     }
     private void validatePoint(int point) {
-        if (point >= 0){
+        if (point < 0){
             throw new CoreException(ErrorType.INVALID_GENDER);
         }
     }
@@ -136,5 +136,9 @@ public class User extends BaseEntity {
     }
     public int getPoint(){
         return point;
+    }
+    public void setPoint(int point) {
+        validatePoint(point);  // 유효성 검증
+        this.point = point;    // 값 설정
     }
 }
