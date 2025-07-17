@@ -57,6 +57,18 @@ public class UserController {
     public ResponseEntity<Void> handleMissingHeader(MissingRequestHeaderException e) {
         return ResponseEntity.badRequest().build(); // 400 반환
     }
+
+    @PostMapping("/charge")
+    public ResponseEntity<Integer> chargePoints(@RequestHeader("User-Id") String userId,
+                                                @RequestBody int amount) {
+        try {
+            int newTotalPoints = userService.chargePoint(userId, amount);
+            return ResponseEntity.ok(newTotalPoints);  // 충전된 보유 총량 반환
+        } catch (CoreException e) {
+            return ResponseEntity.status(e.getErrorType().getStatus()).build();
+        }
+    }
+
 }
 
 
