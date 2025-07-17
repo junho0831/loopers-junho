@@ -2,6 +2,7 @@ package com.loopers.domain.example;
 
 import com.loopers.infrastructure.example.UserRepository;
 import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
@@ -132,5 +133,24 @@ public class UserServiceIntegrationTest {
         // then
         assertNull(user);
     }
+    @Test
+    @DisplayName("존재하지 않는 유저 ID로 충전을 시도한 경우, 실패한다")
+    public void chargePoint_WithNonExistentUserId_ThrowsException() {
+        // given
+        String userId = "nonExistentUser";
+        int chargeAmount = 1000;
 
+        when(userRepository.findUserPointByUserId(userId)).thenReturn(0);
+        when(userRepository.updateUserPoints(userId, 1000)).thenReturn(0);
+
+        // when & then
+        CoreException exception = assertThrows(CoreException.class, () -> {
+            userService.chargePoint(userId, chargeAmount);
+        });
+
+        // then
+        assertEquals(ErrorType.USER_NOT_FOUND, exception.getErrorType());
+        verify(userRepository, times(1)).findUserPointByUserId(userId);
+        verify(userRepository, times(1)).updateUserPoints(userId, 1000);
+    }
 }
