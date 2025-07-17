@@ -9,5 +9,9 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     Optional<User> findByUserId(String userId);
 
+    int findUserPointByUserId(String userId);
+
     boolean existsByUserId(String userId);
+
+    int updateUserPoints(String userId, int newPoints);
 }

@@ -27,7 +27,29 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public User findUser(String userId) {
-        return userRepository.findByUserId(userId).orElse(null);
+        return userRepository.findByUserId(userId)
+                .orElse(null);
     }
 
+    @Transactional(readOnly = true)
+    public int findUserPoint(String userId) {
+        return userRepository.findUserPointByUserId(userId);
+    }
+
+    public int chargePoint(String userId, int chargeAmount) {
+        if (chargeAmount < 0) {
+            throw new CoreException(ErrorType.INVALID_CHARGE_AMOUNT);
+        }
+        int currentPoints = userRepository.findUserPointByUserId(userId);
+
+        int newPoints = currentPoints + chargeAmount;
+
+        int updatedRows = userRepository.updateUserPoints(userId, newPoints);
+
+        if (updatedRows == 0) {
+            throw new CoreException(ErrorType.USER_NOT_FOUND);
+        }
+
+        return updatedRows;
+    }
 }

@@ -28,6 +28,9 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
+    @Column(nullable = false)
+    private int point;
+
 
     public User(String userId, String email, String birthday, Gender gender) {
         validateUserId(userId);
@@ -39,6 +42,20 @@ public class User extends BaseEntity {
         this.email = email;
         this.birthday = parseBirthday(birthday);
         this.gender = gender;
+    }
+
+    public User(String userId, String email, String birthday, Gender gender, int point) {
+        validateUserId(userId);
+        validateEmail(email);
+        validateBirthday(birthday);
+        validateGender(gender);
+        validatePoint(point);
+
+        this.userId = userId;
+        this.email = email;
+        this.birthday = parseBirthday(birthday);
+        this.gender = gender;
+        this.point = point;
     }
 
 
@@ -97,6 +114,12 @@ public class User extends BaseEntity {
             throw new CoreException(ErrorType.INVALID_GENDER);
         }
     }
+    private void validatePoint(int point) {
+        if (point < 0){
+            throw new CoreException(ErrorType.INVALID_GENDER);
+        }
+    }
+
     public String getUserId() {
         return userId;
     }
@@ -110,5 +133,12 @@ public class User extends BaseEntity {
     }
     public Gender getGender() {
         return gender;
+    }
+    public int getPoint(){
+        return point;
+    }
+    public void setPoint(int point) {
+        validatePoint(point);  // 유효성 검증
+        this.point = point;    // 값 설정
     }
 }

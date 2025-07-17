@@ -47,5 +47,16 @@ public class UserUnitTest {
             new User("validId", "@email.com", "1990-01-01", Gender.MALE);
         });
     }
+    @Test
+    @DisplayName("0 이하의 정수로 포인트를 충전 시 실패한다")
+    public void chargePoint_WithInvalidAmount_ThrowsException() {
+        // given
+        User user = new User("validId", "test@email.com", "1990-01-01", Gender.MALE, 100);
+        // when & then
+        assertThrows(CoreException.class, () -> {
+            user.setPoint(-100);
+        });
 
+        assertEquals(100, user.getPoint());
+    }
 }

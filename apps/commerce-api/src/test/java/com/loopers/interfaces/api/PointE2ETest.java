@@ -2,8 +2,8 @@ package com.loopers.interfaces.api;
 
 import com.loopers.domain.example.Gender;
 import com.loopers.domain.example.User;
-import com.loopers.infrastructure.example.UserRepository;
 import com.loopers.domain.example.UserService;
+import com.loopers.infrastructure.example.UserRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-class UserE2ETest {
+class PointE2ETest {
 
     private static final String ENDPOINT_REGISTER = "/api/users/register";
     private static final String ENDPOINT_GET_USER = "/api/users/me";
@@ -207,4 +207,72 @@ class UserE2ETest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST); // 이제 400 반환됨
     }
 
+    @DisplayName("존재하는 유저가 1000원을 충전할 경우, 충전된 보유 총량을 응답으로 반환한다")
+    @Test
+    void chargePoint_WithExistingUserAnd1000Won_ReturnsUpdatedPoints() {
+        // given
+        String userId = "existingUser";
+        int chargeAmount = 1000;
+        int newTotalPoints = 1500; // 충전 후 총 포인트
+
+        // Mock 설정: 충전 성공 시 새로운 총 포인트 반환
+        when(userService.chargePoint(userId, chargeAmount)).thenReturn(newTotalPoints);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("User-Id", userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        // RequestBody가 int이므로 직접 숫자 전달
+        HttpEntity<Integer> httpEntity = new HttpEntity<>(chargeAmount, headers);
+
+        // when
+        ResponseEntity<Integer> response = testRestTemplate.exchange(
+                "/api/users/charge",
+                HttpMethod.POST,
+                httpEntity,
+                Integer.class
+        );
+
+        // then
+        assertAll(
+                () -> assertTrue(response.getStatusCode().is2xxSuccessful()),
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(response.getBody()).isNotNull(),
+                () -> assertThat(response.getBody()).isEqualTo(1500) // 충전된 보유 총량
+        );
+
+    }
+
+    @DisplayName("존재하지 않는 유저로 요청할 경우, 404 Not Found 응답을 반환한다")
+    @Test
+    void chargePoint_WithNonExistentUser_ReturnsNotFound() {
+        // given
+        String nonExistentUserId = "nonExistentUser";
+        int chargeAmount = 1000;
+
+        // Mock 설정: 존재하지 않는 사용자에 대해 USER_NOT_FOUND 예외 발생
+        when(userService.chargePoint(nonExistentUserId, chargeAmount))
+                .thenThrow(new CoreException(ErrorType.USER_NOT_FOUND));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("User-Id", nonExistentUserId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        // RequestBody가 int이므로 직접 숫자 전달
+        HttpEntity<Integer> httpEntity = new HttpEntity<>(chargeAmount, headers);
+
+        // when
+        ResponseEntity<String> response = testRestTemplate.exchange(
+                "/api/users/charge",
+                HttpMethod.POST,
+                httpEntity,
+                String.class
+        );
+
+        // then
+        assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND)
+        );
+
+    }
 }
