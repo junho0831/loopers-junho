@@ -9,9 +9,9 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     Optional<User> findByUserId(String userId);
 
-    int findUserPointByUserId(String userId);
+    // TODO: Point 엔티티로 이동 예정
+    // int findUserPointByUserId(String userId);
+    // int updateUserPoints(String userId, int newPoints);
 
     boolean existsByUserId(String userId);
-
-    int updateUserPoints(String userId, int newPoints);
 }

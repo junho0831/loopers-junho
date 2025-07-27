@@ -170,7 +170,8 @@ class UserE2ETest {
 
         // 사용자 존재 확인 + 포인트 조회
         when(userService.findUser(userId)).thenReturn(existingUser);
-        when(userService.findUserPoint(userId)).thenReturn(point);
+        // TODO: Point 엔티티로 이동 예정
+        // when(userService.findUserPoint(userId)).thenReturn(point);
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Id", userId);
