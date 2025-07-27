@@ -9,10 +9,6 @@ import jakarta.persistence.*;
 @Table(name = "points")
 public class Point extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(nullable = false, unique = true)
     private String userId;
 
@@ -53,9 +49,6 @@ public class Point extends BaseEntity {
         this.amount -= useAmount;
     }
 
-    public Long getId() {
-        return id;
-    }
 
     public String getUserId() {
         return userId;
