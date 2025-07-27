@@ -29,9 +29,9 @@ import static org.mockito.Mockito.when;
 @ActiveProfiles("test")
 class PointE2ETest {
 
-    private static final String ENDPOINT_GET_POINTS = "/api/points";
-    private static final String ENDPOINT_CHARGE_POINTS = "/api/points/charge";
-    private static final String ENDPOINT_USE_POINTS = "/api/points/use";
+    private static final String ENDPOINT_GET_POINTS = "/api/v1/points";
+    private static final String ENDPOINT_CHARGE_POINTS = "/api/v1/points/charge";
+    private static final String ENDPOINT_USE_POINTS = "/api/v1/points/use";
 
     @Autowired
     private TestRestTemplate testRestTemplate;
@@ -45,7 +45,7 @@ class PointE2ETest {
     @MockitoBean
     private PointService pointService;
 
-    @DisplayName("GET /api/points")
+    @DisplayName("GET /api/v1/points")
     @Nested
     class GetPoints {
 
@@ -59,7 +59,7 @@ class PointE2ETest {
             when(pointService.findUserPoint(userId)).thenReturn(point);
 
             HttpHeaders headers = new HttpHeaders();
-            headers.set("User-Id", userId);
+            headers.set("X-USER-ID", userId);
             HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
 
             // when
@@ -94,7 +94,7 @@ class PointE2ETest {
         }
     }
 
-    @DisplayName("POST /api/points/charge")
+    @DisplayName("POST /api/v1/points/charge")
     @Nested
     class ChargePoints {
 
@@ -109,7 +109,7 @@ class PointE2ETest {
             when(pointService.chargePoint(userId, chargeAmount)).thenReturn(newTotalPoints);
 
             HttpHeaders headers = new HttpHeaders();
-            headers.set("User-Id", userId);
+            headers.set("X-USER-ID", userId);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<Integer> httpEntity = new HttpEntity<>(chargeAmount, headers);
@@ -160,7 +160,7 @@ class PointE2ETest {
         }
     }
 
-    @DisplayName("POST /api/points/use")
+    @DisplayName("POST /api/v1/points/use")
     @Nested
     class UsePoints {
 
@@ -175,7 +175,7 @@ class PointE2ETest {
             when(pointService.usePoint(userId, useAmount)).thenReturn(remainingPoints);
 
             HttpHeaders headers = new HttpHeaders();
-            headers.set("User-Id", userId);
+            headers.set("X-USER-ID", userId);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<Integer> httpEntity = new HttpEntity<>(useAmount, headers);
@@ -206,7 +206,7 @@ class PointE2ETest {
                     .thenThrow(new CoreException(ErrorType.INSUFFICIENT_POINTS));
 
             HttpHeaders headers = new HttpHeaders();
-            headers.set("User-Id", userId);
+            headers.set("X-USER-ID", userId);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<Integer> httpEntity = new HttpEntity<>(useAmount, headers);

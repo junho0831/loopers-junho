@@ -8,7 +8,7 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/v1/users")
 public class UserController {
 
     private final UserService userService;
@@ -17,7 +17,7 @@ public class UserController {
         this.userService = userService;
     }
 
-    @PostMapping("/register")
+    @PostMapping
     public ResponseEntity<User> registerUser(@RequestBody User request) {
         User user = userService.registerUser(
                 request.getUserId(),
@@ -29,7 +29,7 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
     @GetMapping("/me")
-    public ResponseEntity<User> me(@RequestHeader("User-Id") String userId) {
+    public ResponseEntity<User> me(@RequestHeader("X-USER-ID") String userId) {
         User user = userService.findUser(userId);
         return ResponseEntity.ok(user);
     }
