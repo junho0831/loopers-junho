@@ -11,9 +11,9 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:${project.properties["springDocOpenApiVersion"]}")
 
     // querydsl
-    annotationProcessor("com.querydsl:querydsl-apt::jakarta")
-    annotationProcessor("jakarta.persistence:jakarta.persistence-api")
-    annotationProcessor("jakarta.annotation:jakarta.annotation-api")
+//    annotationProcessor("com.querydsl:querydsl-apt::jakarta")
+//    annotationProcessor("jakarta.persistence:jakarta.persistence-api")
+//    annotationProcessor("jakarta.annotation:jakarta.annotation-api")
 
     // test-fixtures
     testImplementation(testFixtures(project(":modules:jpa")))
