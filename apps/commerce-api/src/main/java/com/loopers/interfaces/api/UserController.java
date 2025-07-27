@@ -8,7 +8,7 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/v1/users")
 public class UserController {
 
     private final UserService userService;
@@ -17,57 +17,37 @@ public class UserController {
         this.userService = userService;
     }
 
-    @PostMapping("/register")
+    @PostMapping
     public ResponseEntity<User> registerUser(@RequestBody User request) {
-        try {
-            User user = userService.registerUser(
-                    request.getUserId(),
-                    request.getEmail(),
-                    request.getBirthday().toString(),
-                    request.getGender()
-            );
+        User user = userService.registerUser(
+                request.getUserId(),
+                request.getEmail(),
+                request.getBirthday().toString(),
+                request.getGender()
+        );
 
-            return ResponseEntity.ok(user);
-        } catch (CoreException e) {
-            return ResponseEntity.status(e.getErrorType().getStatus()).build();
-        }
+        return ResponseEntity.ok(user);
     }
     @GetMapping("/me")
-    public ResponseEntity<User> me(@RequestHeader("User-Id") String userId) {
-        try {
-            User user = userService.findUser(userId);
-            return ResponseEntity.ok(user);
-        } catch (CoreException e) {
-            return ResponseEntity.status(e.getErrorType().getStatus()).build();
-        }
+    public ResponseEntity<User> me(@RequestHeader("X-USER-ID") String userId) {
+        User user = userService.findUser(userId);
+        return ResponseEntity.ok(user);
     }
 
 
-    @GetMapping("/points")
-    public ResponseEntity<Integer> points(@RequestHeader("User-Id") String userId) {
-        try {
-            int userPoint = userService.findUserPoint(userId);
-            return ResponseEntity.ok(userPoint);
-        } catch (CoreException e) {
-            return ResponseEntity.status(e.getErrorType().getStatus()).build();
-        }
-    }
+    // TODO: Point 엔티티로 이동 예정
+    // @GetMapping("/points")
+    // public ResponseEntity<Integer> points(@RequestHeader("User-Id") String userId) {
+    //     int userPoint = userService.findUserPoint(userId);
+    //     return ResponseEntity.ok(userPoint);
+    // }
 
-    @ExceptionHandler(MissingRequestHeaderException.class)
-    public ResponseEntity<Void> handleMissingHeader(MissingRequestHeaderException e) {
-        return ResponseEntity.badRequest().build(); // 400 반환
-    }
-
-    @PostMapping("/charge")
-    public ResponseEntity<Integer> chargePoints(@RequestHeader("User-Id") String userId,
-                                                @RequestBody int amount) {
-        try {
-            int newTotalPoints = userService.chargePoint(userId, amount);
-            return ResponseEntity.ok(newTotalPoints);  // 충전된 보유 총량 반환
-        } catch (CoreException e) {
-            return ResponseEntity.status(e.getErrorType().getStatus()).build();
-        }
-    }
+    // @PostMapping("/charge")
+    // public ResponseEntity<Integer> chargePoints(@RequestHeader("User-Id") String userId,
+    //                                             @RequestBody int amount) {
+    //     int newTotalPoints = userService.chargePoint(userId, amount);
+    //     return ResponseEntity.ok(newTotalPoints);
+    // }
 
 }
 

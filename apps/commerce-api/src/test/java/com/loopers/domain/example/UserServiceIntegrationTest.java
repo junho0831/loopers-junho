@@ -101,22 +101,23 @@ public class UserServiceIntegrationTest {
         assertNull(result);
         verify(userRepository, times(1)).findByUserId(userId);
     }
-    @Test
-    @DisplayName("해당 ID 의 회원이 존재할 경우, 보유 포인트가 반환된다.")
-    public void findUser_WithExistingId_ReturPoint(){
-        // given
-        String userId = "testUser";
-        int expectedPoint = 1000;
+    // TODO: Point 엔티티로 이동 예정
+    // @Test
+    // @DisplayName("해당 ID 의 회원이 존재할 경우, 보유 포인트가 반환된다.")
+    // public void findUser_WithExistingId_ReturPoint(){
+    //     // given
+    //     String userId = "testUser";
+    //     int expectedPoint = 1000;
 
-        when(userRepository.findUserPointByUserId(userId)).thenReturn(expectedPoint);
+    //     when(userRepository.findUserPointByUserId(userId)).thenReturn(expectedPoint);
 
-        // when
-        int actualPoint = userService.findUserPoint(userId);
+    //     // when
+    //     int actualPoint = userService.findUserPoint(userId);
 
-        // then
-        assertEquals(expectedPoint, actualPoint);
-        verify(userRepository, times(1)).findUserPointByUserId(userId);
-    }
+    //     // then
+    //     assertEquals(expectedPoint, actualPoint);
+    //     verify(userRepository, times(1)).findUserPointByUserId(userId);
+    // }
 
     @Test
     @DisplayName("해당 ID의 회원이 존재하지 않을 경우, null이 반환된다.")
@@ -133,24 +134,25 @@ public class UserServiceIntegrationTest {
         // then
         assertNull(user);
     }
-    @Test
-    @DisplayName("존재하지 않는 유저 ID로 충전을 시도한 경우, 실패한다")
-    public void chargePoint_WithNonExistentUserId_ThrowsException() {
-        // given
-        String userId = "nonExistentUser";
-        int chargeAmount = 1000;
+    // TODO: Point 엔티티로 이동 예정
+    // @Test
+    // @DisplayName("존재하지 않는 유저 ID로 충전을 시도한 경우, 실패한다")
+    // public void chargePoint_WithNonExistentUserId_ThrowsException() {
+    //     // given
+    //     String userId = "nonExistentUser";
+    //     int chargeAmount = 1000;
 
-        when(userRepository.findUserPointByUserId(userId)).thenReturn(0);
-        when(userRepository.updateUserPoints(userId, 1000)).thenReturn(0);
+    //     when(userRepository.findUserPointByUserId(userId)).thenReturn(0);
+    //     when(userRepository.updateUserPoints(userId, 1000)).thenReturn(0);
 
-        // when & then
-        CoreException exception = assertThrows(CoreException.class, () -> {
-            userService.chargePoint(userId, chargeAmount);
-        });
+    //     // when & then
+    //     CoreException exception = assertThrows(CoreException.class, () -> {
+    //         userService.chargePoint(userId, chargeAmount);
+    //     });
 
-        // then
-        assertEquals(ErrorType.USER_NOT_FOUND, exception.getErrorType());
-        verify(userRepository, times(1)).findUserPointByUserId(userId);
-        verify(userRepository, times(1)).updateUserPoints(userId, 1000);
-    }
+    //     // then
+    //     assertEquals(ErrorType.USER_NOT_FOUND, exception.getErrorType());
+    //     verify(userRepository, times(1)).findUserPointByUserId(userId);
+    //     verify(userRepository, times(1)).updateUserPoints(userId, 1000);
+    // }
 }
