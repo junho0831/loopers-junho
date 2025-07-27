@@ -31,7 +31,9 @@ public enum ErrorType {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다"),
 
     //포인트
-    INVALID_POINT_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_POINT_FORMAT", "0 보다 작을 수 없습니다");
+    INVALID_POINT_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_POINT_FORMAT", "0 보다 작을 수 없습니다"),
+    INVALID_USE_AMOUNT(HttpStatus.BAD_REQUEST, "INVALID_USE_AMOUNT", "사용 금액은 0보다 큰 값이어야 합니다"),
+    INSUFFICIENT_POINTS(HttpStatus.BAD_REQUEST, "INSUFFICIENT_POINTS", "포인트가 부족합니다");
 
     private final HttpStatus status;
     private final String code;
