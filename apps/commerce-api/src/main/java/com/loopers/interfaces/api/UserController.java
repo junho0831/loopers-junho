@@ -1,7 +1,7 @@
 package com.loopers.interfaces.api;
 
-import com.loopers.domain.example.UserService;
-import com.loopers.domain.example.User;
+import com.loopers.application.user.UserFacade;
+import com.loopers.domain.user.User;
 import com.loopers.support.error.CoreException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -11,26 +11,27 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/users")
 public class UserController {
 
-    private final UserService userService;
+    private final UserFacade userFacade;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
+    public UserController(UserFacade userFacade) {
+        this.userFacade = userFacade;
     }
 
     @PostMapping
     public ResponseEntity<User> registerUser(@RequestBody User request) {
-        User user = userService.registerUser(
+        User user = userFacade.registerUser(
                 request.getUserId(),
-                request.getEmail(),
-                request.getBirthday().toString(),
-                request.getGender()
+                request.getGender(),
+                request.getBirthDate(),
+                request.getEmail()
         );
 
         return ResponseEntity.ok(user);
     }
     @GetMapping("/me")
     public ResponseEntity<User> me(@RequestHeader("X-USER-ID") String userId) {
-        User user = userService.findUser(userId);
+        User user = userFacade.getUserInfo(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
         return ResponseEntity.ok(user);
     }
 

@@ -6,10 +6,11 @@ import com.loopers.infrastructure.example.UserRepository;
 import com.loopers.domain.example.UserService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import com.loopers.utils.DatabaseCleanUp;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Disabled;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -27,12 +28,15 @@ import static org.mockito.Mockito.when;
 @ActiveProfiles("test")
 class UserE2ETest {
 
-    private static final String ENDPOINT_REGISTER = "/api/v1/users";
-    private static final String ENDPOINT_GET_USER = "/api/v1/users/me";
-    // TODO: Point 엔티티로 이동 예정
-    // private static final String ENDPOINT_GET_POINTS = "/api/users/points";
+    private static final String ENDPOINT_REGISTER = "/api/users/register";
+    private static final String ENDPOINT_GET_USER = "/api/users/me";
+    private static final String ENDPOINT_GET_POINTS = "/api/users/points";
+    
     @Autowired
     private TestRestTemplate testRestTemplate;
+
+    @Autowired
+    private DatabaseCleanUp databaseCleanUp;
 
     @MockitoBean
     private UserRepository userRepository;
@@ -40,7 +44,12 @@ class UserE2ETest {
     @MockitoBean
     private UserService userService;
 
-    @DisplayName("POST /api/v1/users")
+    @BeforeEach
+    void tearDown() {
+        databaseCleanUp.truncateAllTables();
+    }
+
+    @DisplayName("POST /api/users/register")
     @Nested
     class Register {
 
@@ -107,7 +116,7 @@ class UserE2ETest {
             when(userService.findUser(userId)).thenReturn(existingUser);
 
             HttpHeaders headers = new HttpHeaders();
-            headers.set("X-USER-ID", userId);
+            headers.set("User-Id", userId);
             HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
 
             // when
@@ -143,7 +152,7 @@ class UserE2ETest {
                     .thenThrow(new CoreException(ErrorType.USER_NOT_FOUND, "사용자를 찾을 수 없습니다"));
 
             HttpHeaders headers = new HttpHeaders();
-            headers.set("X-USER-ID", nonExistingUserId);
+            headers.set("User-Id", nonExistingUserId);
             HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
 
             // when
@@ -161,4 +170,52 @@ class UserE2ETest {
             );
         }
     }
+
+    @DisplayName("포인트 조회에 성공할 경우, 보유 포인트를 응답으로 반환한다")
+    @Test
+    void getUserPoint_WithValidId_ReturnsPoint() {
+        // given
+        String userId = "testUser";
+        int point = 1500;
+        User existingUser = new User(userId, "test@email.com", "1990-01-01", Gender.MALE);
+
+        // 사용자 존재 확인 + 포인트 조회
+        when(userService.findUser(userId)).thenReturn(existingUser);
+        when(userService.findUserPoint(userId)).thenReturn(point);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("User-Id", userId);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+        // when
+        ResponseEntity<Integer> response = testRestTemplate.exchange(
+                ENDPOINT_GET_POINTS,
+                HttpMethod.GET,
+                httpEntity,
+                Integer.class
+        );
+
+        // then
+        assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(response.getBody()).isEqualTo(1500)
+        );
+    }
+
+    @Test
+    @DisplayName("User-Id 헤더가 없을 경우, 400 Bad Request 응답을 반환한다")
+    void getUserPoint_WithoutHeader_ReturnsBadRequest() {
+        // when
+        HttpEntity<Void> httpEntity = new HttpEntity<>(new HttpHeaders());
+        ResponseEntity<String> response = testRestTemplate.exchange(
+                ENDPOINT_GET_POINTS,
+                HttpMethod.GET,
+                httpEntity,
+                String.class
+        );
+
+        // then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST); // 이제 400 반환됨
+    }
+
 }
