@@ -1,36 +1,37 @@
 package com.loopers.interfaces.api;
 
-import com.loopers.domain.example.PointService;
+import com.loopers.application.point.PointFacade;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/v1/points")
 public class PointController {
 
-    private final PointService pointService;
+    private final PointFacade pointFacade;
 
-    public PointController(PointService pointService) {
-        this.pointService = pointService;
+    public PointController(PointFacade pointFacade) {
+        this.pointFacade = pointFacade;
     }
 
     @GetMapping
-    public ResponseEntity<Integer> getPoints(@RequestHeader("X-USER-ID") String userId) {
-        int userPoint = pointService.findUserPoint(userId);
+    public ResponseEntity<BigDecimal> getPoints(@RequestHeader("X-USER-ID") String userId) {
+        BigDecimal userPoint = pointFacade.getPoints(userId);
         return ResponseEntity.ok(userPoint);
     }
 
     @PostMapping("/charge")
-    public ResponseEntity<Integer> chargePoints(@RequestHeader("X-USER-ID") String userId,
-                                               @RequestBody int amount) {
-        int newTotalPoints = pointService.chargePoint(userId, amount);
+    public ResponseEntity<BigDecimal> chargePoints(@RequestHeader("X-USER-ID") String userId,
+                                               @RequestBody BigDecimal amount) {
+        BigDecimal newTotalPoints = pointFacade.chargePoints(userId, amount);
         return ResponseEntity.ok(newTotalPoints);
     }
 
     @PostMapping("/use")
-    public ResponseEntity<Integer> usePoints(@RequestHeader("X-USER-ID") String userId,
-                                            @RequestBody int amount) {
-        int remainingPoints = pointService.usePoint(userId, amount);
+    public ResponseEntity<BigDecimal> usePoints(@RequestHeader("X-USER-ID") String userId,
+                                            @RequestBody BigDecimal amount) {
+        BigDecimal remainingPoints = pointFacade.usePoints(userId, amount);
         return ResponseEntity.ok(remainingPoints);
     }
 }
