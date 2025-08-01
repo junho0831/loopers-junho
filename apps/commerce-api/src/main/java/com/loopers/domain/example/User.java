@@ -1,6 +1,5 @@
 package com.loopers.domain.example;
 
-import com.loopers.domain.BaseEntity;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import jakarta.persistence.*;
@@ -11,9 +10,9 @@ import java.time.format.DateTimeParseException;
 
 import static org.apache.commons.lang3.StringUtils.isAlphanumeric;
 
-@Entity
-@Table(name = "users")
-public class User extends BaseEntity {
+@Entity(name = "ExampleUser")
+@Table(name = "example_users")
+public class User {
 
     @Id
     private String userId;

@@ -31,26 +31,25 @@ public class UserService {
                 .orElse(null);
     }
 
-    // TODO: Point 엔티티로 이동 예정
-    // @Transactional(readOnly = true)
-    // public int findUserPoint(String userId) {
-    //     return userRepository.findUserPointByUserId(userId);
-    // }
+     @Transactional(readOnly = true)
+     public int findUserPoint(String userId) {
+         return userRepository.findUserPointByUserId(userId);
+     }
 
-    // public int chargePoint(String userId, int chargeAmount) {
-    //     if (chargeAmount < 0) {
-    //         throw new CoreException(ErrorType.INVALID_CHARGE_AMOUNT);
-    //     }
-    //     int currentPoints = userRepository.findUserPointByUserId(userId);
+     public int chargePoint(String userId, int chargeAmount) {
+         if (chargeAmount < 0) {
+             throw new CoreException(ErrorType.INVALID_CHARGE_AMOUNT);
+         }
+         int currentPoints = userRepository.findUserPointByUserId(userId);
 
-    //     int newPoints = currentPoints + chargeAmount;
+         int newPoints = currentPoints + chargeAmount;
 
-    //     int updatedRows = userRepository.updateUserPoints(userId, newPoints);
+         int updatedRows = userRepository.updateUserPoints(userId, newPoints);
 
-    //     if (updatedRows == 0) {
-    //         throw new CoreException(ErrorType.USER_NOT_FOUND);
-    //     }
+         if (updatedRows == 0) {
+             throw new CoreException(ErrorType.USER_NOT_FOUND);
+         }
 
-    //     return updatedRows;
-    // }
+         return updatedRows;
+     }
 }

@@ -1,11 +1,9 @@
 package com.loopers.support.error;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 @Getter
-@RequiredArgsConstructor
 public enum ErrorType {
     // 범용 에러
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "일시적인 오류가 발생했습니다."),
@@ -33,9 +31,29 @@ public enum ErrorType {
     //포인트
     INVALID_POINT_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_POINT_FORMAT", "0 보다 작을 수 없습니다"),
     INVALID_USE_AMOUNT(HttpStatus.BAD_REQUEST, "INVALID_USE_AMOUNT", "사용 금액은 0보다 큰 값이어야 합니다"),
-    INSUFFICIENT_POINTS(HttpStatus.BAD_REQUEST, "INSUFFICIENT_POINTS", "포인트가 부족합니다");
+    INSUFFICIENT_POINTS(HttpStatus.BAD_REQUEST, "INSUFFICIENT_POINTS", "포인트가 부족합니다"),
+
+    //상품
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "상품을 찾을 수 없습니다"),
+    INVALID_SORT_TYPE(HttpStatus.BAD_REQUEST, "INVALID_SORT_TYPE", "잘못된 정렬 타입입니다"),
+
+    //브랜드
+    BRAND_NOT_FOUND(HttpStatus.NOT_FOUND, "BRAND_NOT_FOUND", "브랜드를 찾을 수 없습니다"),
+
+    //주문
+    ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "주문을 찾을 수 없습니다");
 
     private final HttpStatus status;
     private final String code;
     private final String message;
+
+    ErrorType(HttpStatus status, String code, String message) {
+        this.status = status;
+        this.code = code;
+        this.message = message;
+    }
+
+    public String getMessage() {
+        return this.message;
+    }
 }

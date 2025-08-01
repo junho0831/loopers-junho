@@ -20,7 +20,7 @@ public abstract class BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private final Long id = 0L;
+    private Long id;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private ZonedDateTime createdAt;
@@ -69,5 +69,13 @@ public abstract class BaseEntity {
         if (this.deletedAt != null) {
             this.deletedAt = null;
         }
+    }
+
+    public Long getId() {
+        return this.id;
+    }
+
+    public ZonedDateTime getCreatedAt() {
+        return this.createdAt;
     }
 }

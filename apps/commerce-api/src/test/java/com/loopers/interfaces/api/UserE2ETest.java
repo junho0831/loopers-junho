@@ -1,15 +1,15 @@
 package com.loopers.interfaces.api;
 
-import com.loopers.domain.example.Gender;
-import com.loopers.domain.example.User;
-import com.loopers.infrastructure.example.UserRepository;
-import com.loopers.domain.example.UserService;
+import com.loopers.domain.user.User;
+import com.loopers.application.user.UserFacade;
+import com.loopers.application.point.PointFacade;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import com.loopers.utils.DatabaseCleanUp;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Disabled;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -29,18 +29,26 @@ class UserE2ETest {
 
     private static final String ENDPOINT_REGISTER = "/api/v1/users";
     private static final String ENDPOINT_GET_USER = "/api/v1/users/me";
-    // TODO: Point 엔티티로 이동 예정
-    // private static final String ENDPOINT_GET_POINTS = "/api/users/points";
+    private static final String ENDPOINT_GET_POINTS = "/api/v1/points";
+    
     @Autowired
     private TestRestTemplate testRestTemplate;
 
-    @MockitoBean
-    private UserRepository userRepository;
+    @Autowired
+    private DatabaseCleanUp databaseCleanUp;
 
     @MockitoBean
-    private UserService userService;
+    private UserFacade userFacade;
 
-    @DisplayName("POST /api/v1/users")
+    @MockitoBean
+    private PointFacade pointFacade;
+
+    @BeforeEach
+    void tearDown() {
+        databaseCleanUp.truncateAllTables();
+    }
+
+    @DisplayName("POST /api/users/register")
     @Nested
     class Register {
 
@@ -48,10 +56,10 @@ class UserE2ETest {
         @Test
         void registerUser_WithValidData_ReturnsUserInfo() {
             // arrange
-            User request = new User("testUser", "test@email.com", "1990-01-01", Gender.MALE);
-            User savedUser = new User("testUser", "test@email.com", "1990-01-01", Gender.MALE);
+            User request = new User("testUser", "MALE", java.time.LocalDate.of(1990, 1, 1), "test@email.com");
+            User savedUser = new User("testUser", "MALE", java.time.LocalDate.of(1990, 1, 1), "test@email.com");
 
-            when(userService.registerUser("testUser", "test@email.com", "1990-01-01", Gender.MALE))
+            when(userFacade.registerUser("testUser", "MALE", java.time.LocalDate.of(1990, 1, 1), "test@email.com"))
                     .thenReturn(savedUser);
 
             HttpEntity<User> httpEntity = new HttpEntity<>(request);
@@ -65,7 +73,7 @@ class UserE2ETest {
                     () -> assertTrue(response.getStatusCode().is2xxSuccessful()),
                     () -> assertThat(response.getBody().getUserId()).isEqualTo("testUser"),
                     () -> assertThat(response.getBody().getEmail()).isEqualTo("test@email.com"),
-                    () -> assertThat(response.getBody().getBirthday()).isEqualTo("1990-01-01")
+                    () -> assertThat(response.getBody().getBirthDate()).isEqualTo(java.time.LocalDate.of(1990, 1, 1))
             );
         }
 
@@ -75,10 +83,10 @@ class UserE2ETest {
         void registerUser_WithMissingGender_ReturnsBadRequest() {
             // arrange
             // gender가 없는 상황을 Mock으로 시뮬레이션
-            when(userService.registerUser(any(String.class), any(String.class), any(String.class), any(Gender.class)))
+            when(userFacade.registerUser(any(String.class), any(String.class), any(java.time.LocalDate.class), any(String.class)))
                     .thenThrow(new CoreException(ErrorType.INVALID_GENDER, "Gender is required"));
 
-            User request = new User("testUser", "test@email.com", "1990-01-01", Gender.MALE);
+            User request = new User("testUser", "MALE", java.time.LocalDate.of(1990, 1, 1), "test@email.com");
             HttpEntity<User> httpEntity = new HttpEntity<>(request);
 
             // act
@@ -102,9 +110,9 @@ class UserE2ETest {
         void getUser_WithExistingId_ReturnsUserInfo() {
             // given
             String userId = "testUser";
-            User existingUser = new User(userId, "test@email.com", "1990-01-01", Gender.MALE);
+            User existingUser = new User(userId, "MALE", java.time.LocalDate.of(1990, 1, 1), "test@email.com");
 
-            when(userService.findUser(userId)).thenReturn(existingUser);
+            when(userFacade.getUserInfo(userId)).thenReturn(java.util.Optional.of(existingUser));
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-USER-ID", userId);
@@ -128,8 +136,8 @@ class UserE2ETest {
                     () -> assertThat(response.getBody()).isNotNull(),
                     () -> assertThat(response.getBody().getUserId()).isEqualTo(userId),
                     () -> assertThat(response.getBody().getEmail()).isEqualTo("test@email.com"),
-                    () -> assertThat(response.getBody().getBirthday().toString()).isEqualTo("1990-01-01"),
-                    () -> assertThat(response.getBody().getGender()).isEqualTo(Gender.MALE)
+                    () -> assertThat(response.getBody().getBirthDate()).isEqualTo(java.time.LocalDate.of(1990, 1, 1)),
+                    () -> assertThat(response.getBody().getGender()).isEqualTo("MALE")
             );
         }
 
@@ -139,8 +147,8 @@ class UserE2ETest {
             // given
             String nonExistingUserId = "nonExistingUser";
 
-            when(userService.findUser(nonExistingUserId))
-                    .thenThrow(new CoreException(ErrorType.USER_NOT_FOUND, "사용자를 찾을 수 없습니다"));
+            when(userFacade.getUserInfo(nonExistingUserId))
+                    .thenReturn(java.util.Optional.empty());
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-USER-ID", nonExistingUserId);
@@ -161,4 +169,49 @@ class UserE2ETest {
             );
         }
     }
+
+    @DisplayName("포인트 조회에 성공할 경우, 보유 포인트를 응답으로 반환한다")
+    @Test
+    void getUserPoint_WithValidId_ReturnsPoint() {
+        // given
+        String userId = "testUser";
+        java.math.BigDecimal point = java.math.BigDecimal.valueOf(1500);
+
+        when(pointFacade.getPoints(userId)).thenReturn(point);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-USER-ID", userId);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+        // when
+        ResponseEntity<java.math.BigDecimal> response = testRestTemplate.exchange(
+                ENDPOINT_GET_POINTS,
+                HttpMethod.GET,
+                httpEntity,
+                java.math.BigDecimal.class
+        );
+
+        // then
+        assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(response.getBody()).isEqualTo(java.math.BigDecimal.valueOf(1500))
+        );
+    }
+
+    @Test
+    @DisplayName("User-Id 헤더가 없을 경우, 400 Bad Request 응답을 반환한다")
+    void getUserPoint_WithoutHeader_ReturnsBadRequest() {
+        // when
+        HttpEntity<Void> httpEntity = new HttpEntity<>(new HttpHeaders());
+        ResponseEntity<String> response = testRestTemplate.exchange(
+                ENDPOINT_GET_POINTS,
+                HttpMethod.GET,
+                httpEntity,
+                String.class
+        );
+
+        // then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST); // 이제 400 반환됨
+    }
+
 }
