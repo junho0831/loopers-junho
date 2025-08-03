@@ -6,7 +6,6 @@ import com.loopers.domain.product.Money;
 import com.loopers.domain.product.Stock;
 import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderItemRequest;
-import com.loopers.domain.order.OrderService;
 import com.loopers.domain.point.Point;
 
 import java.math.BigDecimal;
@@ -14,6 +13,7 @@ import com.loopers.infrastructure.brand.JpaBrandRepository;
 import com.loopers.infrastructure.product.JpaProductRepository;
 import com.loopers.infrastructure.order.JpaOrderRepository;
 import com.loopers.infrastructure.point.JpaPointRepository;
+import com.loopers.domain.order.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,6 +31,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceIntegrationTest {
@@ -47,8 +48,11 @@ class OrderServiceIntegrationTest {
     @Mock
     private JpaPointRepository pointRepository;
 
-    @InjectMocks
+    @Mock
     private OrderService orderService;
+
+    @InjectMocks
+    private OrderFacade orderFacade;
 
     private Brand testBrand;
     private Product testProduct1;
@@ -77,10 +81,12 @@ class OrderServiceIntegrationTest {
         when(productRepository.findById(productId1)).thenReturn(Optional.of(testProduct1));
         when(productRepository.findById(productId2)).thenReturn(Optional.of(testProduct2));
         when(pointRepository.findByUserId(testUserId)).thenReturn(Optional.of(testUserPoint));
+        when(orderService.calculateTotalAmount(any(), any())).thenReturn(new Money(40000));
+        when(orderService.createOrderItems(any(), any())).thenReturn(List.of());
         when(orderRepository.save(any(Order.class))).thenReturn(new Order(testUserId, List.of(), new Money(40000)));
 
         // when
-        Order result = orderService.createOrder(testUserId, itemRequests);
+        Order result = orderFacade.createOrder(testUserId, itemRequests);
 
         // then
         assertThat(result).isNotNull();
@@ -96,7 +102,7 @@ class OrderServiceIntegrationTest {
                 new OrderItemRequest(nonExistentProductId, 1));
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrder(testUserId, itemRequests))
+        assertThatThrownBy(() -> orderFacade.createOrder(testUserId, itemRequests))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Product not found");
     }
@@ -111,9 +117,10 @@ class OrderServiceIntegrationTest {
         );
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(testProduct1));
+        doThrow(new IllegalArgumentException("Insufficient stock")).when(orderService).validateProductsStock(any(), any());
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrder(testUserId, itemRequests))
+        assertThatThrownBy(() -> orderFacade.createOrder(testUserId, itemRequests))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Insufficient stock");
     }
@@ -131,9 +138,11 @@ class OrderServiceIntegrationTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(testProduct1));
         when(pointRepository.findByUserId(testUserId)).thenReturn(Optional.of(insufficientPoint));
+        when(orderService.calculateTotalAmount(any(), any())).thenReturn(new Money(10000));
+        doThrow(new IllegalArgumentException("Insufficient points")).when(orderService).validateUserPoints(any(), any());
 
         // when & then
-        assertThatThrownBy(() -> orderService.createOrder(testUserId, itemRequests))
+        assertThatThrownBy(() -> orderFacade.createOrder(testUserId, itemRequests))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Insufficient points");
     }
@@ -150,7 +159,7 @@ class OrderServiceIntegrationTest {
         when(orderRepository.findByUserId(testUserId)).thenReturn(mockOrders);
 
         // when
-        List<Order> result = orderService.getUserOrders(testUserId);
+        List<Order> result = orderFacade.getUserOrders(testUserId);
 
         // then
         assertThat(result).hasSize(2);
@@ -164,7 +173,7 @@ class OrderServiceIntegrationTest {
         String userWithNoOrders = "userWithNoOrders";
 
         // when
-        List<Order> result = orderService.getUserOrders(userWithNoOrders);
+        List<Order> result = orderFacade.getUserOrders(userWithNoOrders);
 
         // then
         assertThat(result).isEmpty();
@@ -180,7 +189,7 @@ class OrderServiceIntegrationTest {
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(mockOrder));
 
         // when
-        var result = orderService.getOrderById(orderId);
+        var result = orderFacade.getOrderById(orderId);
 
         // then
         assertThat(result).isPresent();
@@ -194,7 +203,7 @@ class OrderServiceIntegrationTest {
         Long nonExistentOrderId = 999L;
 
         // when
-        var result = orderService.getOrderById(nonExistentOrderId);
+        var result = orderFacade.getOrderById(nonExistentOrderId);
 
         // then
         assertThat(result).isEmpty();
