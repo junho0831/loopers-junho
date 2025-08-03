@@ -16,4 +16,8 @@ public class CoreException extends RuntimeException {
         this.errorType = errorType;
         this.customMessage = customMessage;
     }
+
+    public ErrorType getErrorType() {
+        return this.errorType;
+    }
 }

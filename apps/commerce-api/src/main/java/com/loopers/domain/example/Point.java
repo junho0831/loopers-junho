@@ -1,13 +1,16 @@
 package com.loopers.domain.example;
 
-import com.loopers.domain.BaseEntity;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import jakarta.persistence.*;
 
-@Entity
-@Table(name = "points")
-public class Point extends BaseEntity {
+@Entity(name = "ExamplePoint")
+@Table(name = "example_points")
+public class Point {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false, unique = true)
     private String userId;
@@ -49,6 +52,9 @@ public class Point extends BaseEntity {
         this.amount -= useAmount;
     }
 
+    public Long getId() {
+        return id;
+    }
 
     public String getUserId() {
         return userId;
