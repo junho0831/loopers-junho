@@ -5,10 +5,10 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.Money;
 import com.loopers.domain.product.Stock;
 import com.loopers.domain.product.ProductSortType;
-import com.loopers.domain.product.ProductService;
 import com.loopers.infrastructure.brand.JpaBrandRepository;
 import com.loopers.infrastructure.product.JpaProductRepository;
 import com.loopers.infrastructure.like.JpaProductLikeRepository;
+import com.loopers.domain.product.ProductService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,8 +41,11 @@ class ProductServiceIntegrationTest {
     @Mock
     private JpaProductLikeRepository likeRepository;
 
-    @InjectMocks
+    @Mock
     private ProductService productService;
+
+    @InjectMocks
+    private ProductFacade productFacade;
 
     private Brand testBrand;
     private Product testProduct1;
@@ -78,16 +81,17 @@ class ProductServiceIntegrationTest {
         Long productId = 1L;
         when(productRepository.findById(productId)).thenReturn(Optional.of(testProduct1));
         when(brandRepository.findById(testBrand.getId())).thenReturn(Optional.of(testBrand));
+        when(productService.createProductDetail(any(), any())).thenReturn(new com.loopers.domain.product.ProductDetail(testProduct1, testBrand));
 
         // when
-        com.loopers.domain.product.ProductDetail result = productService.getProductDetail(productId);
+        com.loopers.interfaces.api.ProductDetailResponse result = productFacade.getProductDetail(productId);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getProduct().getId()).isEqualTo(productId);
-        assertThat(result.getProduct().getName()).isEqualTo("상품1");
-        assertThat(result.getBrand().getId()).isEqualTo(testBrand.getId());
-        assertThat(result.getBrand().getName()).isEqualTo("테스트 브랜드");
+        assertThat(result.getProductId()).isEqualTo(productId);
+        assertThat(result.getProductName()).isEqualTo("상품1");
+        assertThat(result.getBrandId()).isEqualTo(testBrand.getId());
+        assertThat(result.getBrandName()).isEqualTo("테스트 브랜드");
     }
 
     @Test
@@ -98,7 +102,7 @@ class ProductServiceIntegrationTest {
         when(productRepository.findById(nonExistentProductId)).thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> productService.getProductDetail(nonExistentProductId))
+        assertThatThrownBy(() -> productFacade.getProductDetail(nonExistentProductId))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Product not found");
     }
@@ -113,7 +117,7 @@ class ProductServiceIntegrationTest {
         when(productRepository.findByBrandId(brandId, pageable)).thenReturn(mockPage);
 
         // when
-        Page<Product> result = productService.getProducts(ProductSortType.LATEST, brandId, pageable);
+        Page<Product> result = productFacade.getProducts(ProductSortType.LATEST, brandId, pageable);
 
         // then
         assertThat(result).isNotNull();
@@ -130,7 +134,7 @@ class ProductServiceIntegrationTest {
         when(productRepository.findAllOrderBy(ProductSortType.PRICE_ASC, pageable)).thenReturn(mockPage);
 
         // when
-        Page<Product> result = productService.getProducts(ProductSortType.PRICE_ASC, null, pageable);
+        Page<Product> result = productFacade.getProducts(ProductSortType.PRICE_ASC, null, pageable);
 
         // then
         assertThat(result).isNotNull();
@@ -153,7 +157,7 @@ class ProductServiceIntegrationTest {
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
-        Product result = productService.createProduct(name, price, stock, brandId);
+        Product result = productFacade.createProduct(name, price, stock, brandId);
 
         // then
         assertThat(result).isNotNull();
@@ -174,7 +178,7 @@ class ProductServiceIntegrationTest {
         when(brandRepository.findById(nonExistentBrandId)).thenReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> productService.createProduct(name, price, stock, nonExistentBrandId))
+        assertThatThrownBy(() -> productFacade.createProduct(name, price, stock, nonExistentBrandId))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Brand not found");
     }
@@ -191,7 +195,7 @@ class ProductServiceIntegrationTest {
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
-        productService.decreaseProductStock(productId, quantity);
+        productFacade.decreaseProductStock(productId, quantity);
 
         // then
         assertThat(testProduct1.getStock().getQuantity()).isEqualTo(originalStock - quantity);
@@ -207,7 +211,7 @@ class ProductServiceIntegrationTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(testProduct1));
 
         // when & then
-        assertThatThrownBy(() -> productService.decreaseProductStock(productId, quantity))
+        assertThatThrownBy(() -> productFacade.decreaseProductStock(productId, quantity))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Insufficient stock");
     }
