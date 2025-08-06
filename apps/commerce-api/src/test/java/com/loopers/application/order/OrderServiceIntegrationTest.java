@@ -7,13 +7,13 @@ import com.loopers.domain.product.Stock;
 import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderItemRequest;
 import com.loopers.domain.point.Point;
+import com.loopers.domain.point.PointService;
 
 import java.math.BigDecimal;
-import com.loopers.infrastructure.brand.JpaBrandRepository;
-import com.loopers.infrastructure.product.JpaProductRepository;
-import com.loopers.infrastructure.order.JpaOrderRepository;
-import com.loopers.infrastructure.point.JpaPointRepository;
 import com.loopers.domain.order.OrderService;
+import com.loopers.domain.product.ProductService;
+import com.loopers.domain.coupon.CouponService;
+import com.loopers.infrastructure.order.JpaOrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,9 +21,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,19 +34,19 @@ import static org.mockito.Mockito.doThrow;
 class OrderServiceIntegrationTest {
 
     @Mock
-    private JpaProductRepository productRepository;
-
-    @Mock
-    private JpaBrandRepository brandRepository;
-
-    @Mock
     private JpaOrderRepository orderRepository;
 
     @Mock
-    private JpaPointRepository pointRepository;
+    private ProductService productService;
+
+    @Mock
+    private PointService pointService;
 
     @Mock
     private OrderService orderService;
+
+    @Mock
+    private CouponService couponService;
 
     @InjectMocks
     private OrderFacade orderFacade;
@@ -78,9 +75,8 @@ class OrderServiceIntegrationTest {
                 new OrderItemRequest(productId1, 2),
                 new OrderItemRequest(productId2, 1));
 
-        when(productRepository.findById(productId1)).thenReturn(Optional.of(testProduct1));
-        when(productRepository.findById(productId2)).thenReturn(Optional.of(testProduct2));
-        when(pointRepository.findByUserId(testUserId)).thenReturn(Optional.of(testUserPoint));
+        when(productService.loadProductsWithLock(itemRequests)).thenReturn(List.of(testProduct1, testProduct2));
+        when(pointService.loadUserPointsWithLock(testUserId)).thenReturn(testUserPoint);
         when(orderService.calculateTotalAmount(any(), any())).thenReturn(new Money(40000));
         when(orderService.createOrderItems(any(), any())).thenReturn(List.of());
         when(orderRepository.save(any(Order.class))).thenReturn(new Order(testUserId, List.of(), new Money(40000)));
@@ -101,6 +97,9 @@ class OrderServiceIntegrationTest {
         List<OrderItemRequest> itemRequests = List.of(
                 new OrderItemRequest(nonExistentProductId, 1));
 
+        when(productService.loadProductsWithLock(itemRequests))
+                .thenThrow(new IllegalArgumentException("Product not found: " + nonExistentProductId));
+
         // when & then
         assertThatThrownBy(() -> orderFacade.createOrder(testUserId, itemRequests))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -116,7 +115,7 @@ class OrderServiceIntegrationTest {
                 new OrderItemRequest(productId, 15) // 재고보다 많은 수량
         );
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(testProduct1));
+        when(productService.loadProductsWithLock(itemRequests)).thenReturn(List.of(testProduct1));
         doThrow(new IllegalArgumentException("Insufficient stock")).when(orderService).validateProductsStock(any(), any());
 
         // when & then
@@ -136,10 +135,10 @@ class OrderServiceIntegrationTest {
                 new OrderItemRequest(productId, 1) // 10000원 상품
         );
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(testProduct1));
-        when(pointRepository.findByUserId(testUserId)).thenReturn(Optional.of(insufficientPoint));
+        when(productService.loadProductsWithLock(itemRequests)).thenReturn(List.of(testProduct1));
+        when(pointService.loadUserPointsWithLock(testUserId)).thenReturn(insufficientPoint);
         when(orderService.calculateTotalAmount(any(), any())).thenReturn(new Money(10000));
-        doThrow(new IllegalArgumentException("Insufficient points")).when(orderService).validateUserPoints(any(), any());
+        doThrow(new IllegalArgumentException("Insufficient points balance.")).when(pointService).validateUserPoints(any(), any());
 
         // when & then
         assertThatThrownBy(() -> orderFacade.createOrder(testUserId, itemRequests))

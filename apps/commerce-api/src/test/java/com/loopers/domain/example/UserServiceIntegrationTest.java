@@ -1,6 +1,6 @@
 package com.loopers.domain.example;
 
-import com.loopers.infrastructure.example.UserRepository;
+import com.loopers.domain.user.*;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import org.junit.Test;
@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.junit.jupiter.api.DisplayName;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.junit.Assert.*;
@@ -30,16 +31,16 @@ public class UserServiceIntegrationTest {
     public void registerUser_CallsSaveMethod() {
         // given
         String userId = "testUser";
-        String email = "test@email.com";
-        String birthday = "1990-01-01";
+        Email email = new Email("test@email.com");
+        LocalDate birthday = LocalDate.parse("1990-01-01");
 
-        User savedUser = new User(userId, email, birthday, Gender.MALE);
+        User savedUser = new User(userId, Gender.MALE, birthday, email, new Point(0));
 
         when(userRepository.existsByUserId(userId)).thenReturn(false); //중복 아님
         when(userRepository.save(any(User.class))).thenReturn(savedUser); // 무조건 세이브
 
         // when
-        User result = userService.registerUser(userId, email, birthday, Gender.MALE);
+        User result = userService.registerUser(userId, Gender.MALE, birthday, email, new Point(0));
 
         // then
         verify(userRepository, times(1)).existsByUserId(userId);
@@ -57,7 +58,7 @@ public class UserServiceIntegrationTest {
 
         // when
         CoreException exception = assertThrows(CoreException.class, () -> {
-            userService.registerUser(existingUserId, "test@email.com", "1990-01-01", Gender.MALE);
+            userService.registerUser(existingUserId, Gender.MALE, LocalDate.parse("1990-01-01"), new Email("test@email.com"), new Point(0));
         });
 
         // then
@@ -71,7 +72,7 @@ public class UserServiceIntegrationTest {
     public void findUser_WithExistingId_ReturnUser() {
         // given
         String userId = "testUser";
-        User existingUser = new User(userId, "test@email.com", "1990-01-01", Gender.MALE);
+        User existingUser = new User(userId, new Email("test@email.com"), "1990-01-01", Gender.MALE);
 
         when(userRepository.findByUserId(userId)).thenReturn(Optional.of(existingUser));
 
@@ -81,8 +82,8 @@ public class UserServiceIntegrationTest {
         // then
         assertNotNull(result);
         assertEquals(userId, result.getUserId());
-        assertEquals("test@email.com", result.getEmail());
-        assertEquals("1990-01-01", result.getBirthday().toString());
+        assertEquals("test@email.com", result.getEmail().getValue());
+        assertEquals(java.time.LocalDate.of(1990, 1, 1), result.getBirthDate());
         assertEquals(Gender.MALE, result.getGender());
         verify(userRepository, times(1)).findByUserId(userId);
     }
@@ -140,8 +141,7 @@ public class UserServiceIntegrationTest {
         String userId = "nonExistentUser";
         int chargeAmount = 1000;
 
-        when(userRepository.findUserPointByUserId(userId)).thenReturn(0);
-        when(userRepository.updateUserPoints(userId, 1000)).thenReturn(0);
+        when(userRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
         // when & then
         CoreException exception = assertThrows(CoreException.class, () -> {
@@ -150,7 +150,6 @@ public class UserServiceIntegrationTest {
 
         // then
         assertEquals(ErrorType.USER_NOT_FOUND, exception.getErrorType());
-        verify(userRepository, times(1)).findUserPointByUserId(userId);
-        verify(userRepository, times(1)).updateUserPoints(userId, 1000);
+        verify(userRepository, times(1)).findByUserId(userId);
     }
 }
