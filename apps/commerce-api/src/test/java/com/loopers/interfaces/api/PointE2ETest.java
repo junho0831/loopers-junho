@@ -1,5 +1,8 @@
 package com.loopers.interfaces.api;
 
+import com.loopers.domain.user.Email;
+import com.loopers.domain.user.Gender;
+import com.loopers.domain.user.Point;
 import com.loopers.domain.user.User;
 import com.loopers.application.user.UserFacade;
 import com.loopers.application.point.PointFacade;
@@ -56,8 +59,8 @@ class PointE2ETest {
         @Test
         void registerUser_WithValidData_ReturnsUserInfo() {
             // arrange
-            User request = new User("testUser", "MALE", java.time.LocalDate.of(1990, 1, 1), "test@email.com");
-            User savedUser = new User("testUser", "MALE", java.time.LocalDate.of(1990, 1, 1), "test@email.com");
+            User request = new User("testUser", Gender.MALE, java.time.LocalDate.of(1990, 1, 1), new Email("test@email.com"), new Point(0));
+            User savedUser = new User("testUser", Gender.MALE, java.time.LocalDate.of(1990, 1, 1), new Email("test@email.com"), new Point(0));
 
             when(userFacade.registerUser("testUser", "MALE", java.time.LocalDate.of(1990, 1, 1), "test@email.com"))
                     .thenReturn(savedUser);
@@ -72,7 +75,7 @@ class PointE2ETest {
             assertAll(
                     () -> assertTrue(response.getStatusCode().is2xxSuccessful()),
                     () -> assertThat(response.getBody().getUserId()).isEqualTo("testUser"),
-                    () -> assertThat(response.getBody().getEmail()).isEqualTo("test@email.com"),
+                    () -> assertThat(response.getBody().getEmail().getValue()).isEqualTo("test@email.com"),
                     () -> assertThat(response.getBody().getBirthDate()).isEqualTo(java.time.LocalDate.of(1990, 1, 1))
             );
         }
@@ -86,7 +89,7 @@ class PointE2ETest {
             when(userFacade.registerUser(any(String.class), any(String.class), any(java.time.LocalDate.class), any(String.class)))
                     .thenThrow(new CoreException(ErrorType.INVALID_GENDER, "Gender is required"));
 
-            User request = new User("testUser", "MALE", java.time.LocalDate.of(1990, 1, 1), "test@email.com");
+            User request = new User("testUser", Gender.MALE, java.time.LocalDate.of(1990, 1, 1), new Email("test@email.com"), new Point(0));
             HttpEntity<User> httpEntity = new HttpEntity<>(request);
 
             // act
@@ -110,7 +113,7 @@ class PointE2ETest {
         void getUser_WithExistingId_ReturnsUserInfo() {
             // given
             String userId = "testUser";
-            User existingUser = new User(userId, "MALE", java.time.LocalDate.of(1990, 1, 1), "test@email.com");
+            User existingUser = new User(userId, Gender.MALE, java.time.LocalDate.of(1990, 1, 1), new Email("test@email.com"), new Point(0));
 
             when(userFacade.getUserInfo(userId)).thenReturn(java.util.Optional.of(existingUser));
 
@@ -135,9 +138,9 @@ class PointE2ETest {
                     },
                     () -> assertThat(response.getBody()).isNotNull(),
                     () -> assertThat(response.getBody().getUserId()).isEqualTo(userId),
-                    () -> assertThat(response.getBody().getEmail()).isEqualTo("test@email.com"),
+                    () -> assertThat(response.getBody().getEmail().getValue()).isEqualTo("test@email.com"),
                     () -> assertThat(response.getBody().getBirthDate()).isEqualTo(java.time.LocalDate.of(1990, 1, 1)),
-                    () -> assertThat(response.getBody().getGender()).isEqualTo("MALE")
+                    () -> assertThat(response.getBody().getGender()).isEqualTo(Gender.MALE)
             );
         }
 
