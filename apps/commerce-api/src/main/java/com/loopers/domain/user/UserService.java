@@ -1,12 +1,11 @@
-package com.loopers.domain.example;
+package com.loopers.domain.user;
 
-import com.loopers.infrastructure.example.UserRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
+import java.time.LocalDate;
+
 @Transactional
 public class UserService {
 
@@ -16,12 +15,12 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public User registerUser(String userId, String email, String birthday, Gender gender) {
+    public User registerUser(String userId, Gender gender, LocalDate localDate, Email email, Point point)  {
         if (userRepository.existsByUserId(userId)) {
             throw new CoreException(ErrorType.USER_ALREADY_EXISTS);
         }
 
-        User user = new User(userId, email, birthday, gender);
+        User user = new User(userId, gender, localDate, email, point);
         return userRepository.save(user);
     }
 
@@ -37,19 +36,11 @@ public class UserService {
      }
 
      public int chargePoint(String userId, int chargeAmount) {
-         if (chargeAmount < 0) {
-             throw new CoreException(ErrorType.INVALID_CHARGE_AMOUNT);
-         }
-         int currentPoints = userRepository.findUserPointByUserId(userId);
+         User user = userRepository.findByUserId(userId)
+                 .orElseThrow(() -> new CoreException(ErrorType.USER_NOT_FOUND));
 
-         int newPoints = currentPoints + chargeAmount;
+         user.getPoint().charge(chargeAmount);
 
-         int updatedRows = userRepository.updateUserPoints(userId, newPoints);
-
-         if (updatedRows == 0) {
-             throw new CoreException(ErrorType.USER_NOT_FOUND);
-         }
-
-         return updatedRows;
+         return user.getPoint().getAmount();
      }
 }
