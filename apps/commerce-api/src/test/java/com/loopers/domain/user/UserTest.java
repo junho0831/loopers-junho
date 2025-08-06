@@ -1,5 +1,6 @@
 package com.loopers.domain.user;
 
+import com.loopers.support.error.CoreException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -19,13 +20,13 @@ class UserTest {
         String email = "test@example.com";
 
         // when
-        User user = new User(userId, gender, birthDate, email);
+        User user = new User(userId, Gender.MALE, birthDate, new Email(email), new Point(0));
 
         // then
         assertThat(user.getUserId()).isEqualTo(userId);
-        assertThat(user.getGender()).isEqualTo(gender);
+        assertThat(user.getGender()).isEqualTo(Gender.MALE);
         assertThat(user.getBirthDate()).isEqualTo(birthDate);
-        assertThat(user.getEmail()).isEqualTo(email);
+        assertThat(user.getEmail().getValue()).isEqualTo(email);
     }
 
     @Test
@@ -37,9 +38,8 @@ class UserTest {
         String email = "test@example.com";
 
         // when & then
-        assertThatThrownBy(() -> new User(null, gender, birthDate, email))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("User ID cannot be null or empty");
+        assertThatThrownBy(() -> new User(null, Gender.MALE, birthDate, new Email(email), new Point(0)))
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -51,9 +51,8 @@ class UserTest {
         String email = "test@example.com";
 
         // when & then
-        assertThatThrownBy(() -> new User("", gender, birthDate, email))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("User ID cannot be null or empty");
+        assertThatThrownBy(() -> new User("", Gender.MALE, birthDate, new Email(email), new Point(0)))
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -65,9 +64,8 @@ class UserTest {
         LocalDate birthDate = LocalDate.of(1990, 1, 1);
 
         // when & then
-        assertThatThrownBy(() -> new User(userId, gender, birthDate, null))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Email cannot be null or empty");
+        assertThatThrownBy(() -> new User(userId, Gender.MALE, birthDate, null, new Point(0)))
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -79,9 +77,8 @@ class UserTest {
         LocalDate birthDate = LocalDate.of(1990, 1, 1);
 
         // when & then
-        assertThatThrownBy(() -> new User(userId, gender, birthDate, ""))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Email cannot be null or empty");
+        assertThatThrownBy(() -> new Email(""))
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -94,9 +91,8 @@ class UserTest {
         String invalidEmail = "invalid-email";
 
         // when & then
-        assertThatThrownBy(() -> new User(userId, gender, birthDate, invalidEmail))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Invalid email format");
+        assertThatThrownBy(() -> new Email(invalidEmail))
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -108,9 +104,8 @@ class UserTest {
         String email = "test@example.com";
 
         // when & then
-        assertThatThrownBy(() -> new User(userId, null, birthDate, email))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Gender cannot be null or empty");
+        assertThatThrownBy(() -> new User(userId, null, birthDate, new Email(email), new Point(0)))
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -118,14 +113,14 @@ class UserTest {
     void createUserWithInvalidGender() {
         // given
         String userId = "user1";
-        String invalidGender = "INVALID";
         LocalDate birthDate = LocalDate.of(1990, 1, 1);
         String email = "test@example.com";
+        String invalidGender = "INVALID";
 
         // when & then
-        assertThatThrownBy(() -> new User(userId, invalidGender, birthDate, email))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Invalid gender");
+        // Test converting invalid string to Gender enum
+        assertThatThrownBy(() -> Gender.valueOf(invalidGender))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -137,9 +132,8 @@ class UserTest {
         String email = "test@example.com";
 
         // when & then
-        assertThatThrownBy(() -> new User(userId, gender, null, email))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Birth date cannot be null");
+        assertThatThrownBy(() -> new User(userId, Gender.MALE, null, new Email(email), new Point(0)))
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -152,18 +146,17 @@ class UserTest {
         String email = "test@example.com";
 
         // when & then
-        assertThatThrownBy(() -> new User(userId, gender, futureDate, email))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Birth date cannot be in the future");
+        assertThatThrownBy(() -> new User(userId, Gender.MALE, futureDate, new Email(email), new Point(0)))
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
     @DisplayName("동일한 사용자 ID를 가진 사용자는 같다고 판단된다")
     void equalsUser() {
         // given
-        User user1 = new User("user1", "MALE", LocalDate.of(1990, 1, 1), "test1@example.com");
-        User user2 = new User("user1", "FEMALE", LocalDate.of(1995, 5, 5), "test2@example.com");
-        User user3 = new User("user2", "MALE", LocalDate.of(1990, 1, 1), "test1@example.com");
+        User user1 = new User("user1", Gender.MALE, LocalDate.of(1990, 1, 1), new Email("test1@example.com"), new Point(0));
+        User user2 = new User("user1", Gender.FEMALE, LocalDate.of(1995, 5, 5), new Email("test2@example.com"), new Point(0));
+        User user3 = new User("user2", Gender.MALE, LocalDate.of(1990, 1, 1), new Email("test1@example.com"), new Point(0));
 
         // when & then
         assertThat(user1).isEqualTo(user2);

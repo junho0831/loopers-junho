@@ -1,5 +1,7 @@
 package com.loopers.domain.product;
 
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import jakarta.persistence.Embeddable;
 import java.util.Objects;
 
@@ -13,7 +15,7 @@ public class Stock {
 
     public Stock(int quantity) {
         if (quantity < 0) {
-            throw new IllegalArgumentException("Stock quantity cannot be negative.");
+            throw new CoreException(ErrorType.BAD_REQUEST, "재고는 0개 이상이어야 합니다");
         }
         this.quantity = quantity;
     }
@@ -24,10 +26,10 @@ public class Stock {
 
     public Stock decrease(int amount) {
         if (amount < 0) {
-            throw new IllegalArgumentException("Decrease amount cannot be negative.");
+            throw new CoreException(ErrorType.BAD_REQUEST, "차감할 수량은 0개 이상이어야 합니다");
         }
         if (this.quantity < amount) {
-            throw new IllegalArgumentException("Insufficient stock.");
+            throw new CoreException(ErrorType.INSUFFICIENT_STOCK);
         }
         return new Stock(this.quantity - amount);
     }

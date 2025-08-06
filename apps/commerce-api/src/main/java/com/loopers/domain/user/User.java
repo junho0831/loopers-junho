@@ -1,13 +1,16 @@
 package com.loopers.domain.user;
 
 import com.loopers.domain.BaseEntity;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
+import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Objects;
-import java.util.regex.Pattern;
+
+import static org.apache.commons.lang3.StringUtils.isAlphanumeric;
 
 @Entity
 @Table(name = "`user`", uniqueConstraints = {
@@ -15,14 +18,23 @@ import java.util.regex.Pattern;
 })
 public class User extends BaseEntity {
     private String userId;
-    private String gender;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+    
+    @Embedded
+    private Email email;
+    
+    @Embedded
+    private Point point;
+    
     private LocalDate birthDate;
-    private String email;
 
     protected User() {
     }
 
-    public User(String userId, String gender, LocalDate birthDate, String email) {
+    public User(String userId, Gender gender, LocalDate birthDate, Email email, Point point) {
         validateUserId(userId);
         validateGender(gender);
         validateBirthDate(birthDate);
@@ -32,45 +44,53 @@ public class User extends BaseEntity {
         this.gender = gender;
         this.birthDate = birthDate;
         this.email = email;
+        this.point = point;
+    }
+
+    public User(String userId, Email email, String birthday, Gender gender) {
+        LocalDate parsedBirthDate = LocalDate.parse(birthday);
+
+        validateUserId(userId);
+        validateGender(gender);
+        validateBirthDate(parsedBirthDate);
+
+        this.userId = userId;
+        this.gender = gender;
+        this.birthDate = parsedBirthDate;
+        this.email = email;
+        this.point = new Point(0);
     }
 
     private void validateUserId(String userId) {
-        if (userId == null || userId.trim().isEmpty()) {
-            throw new IllegalArgumentException("User ID cannot be null or empty");
+        if (userId == null || userId.isBlank()) {
+            throw new CoreException(ErrorType.INVALID_USER_ID);
         }
         if (userId.length() > 10) {
-            throw new IllegalArgumentException("User ID cannot be longer than 10 characters");
+            throw new CoreException(ErrorType.INVALID_USER_ID_LENGTH);
         }
-        if (!Pattern.matches("^[a-zA-Z0-9]+$", userId)) {
-            throw new IllegalArgumentException("User ID can only contain alphanumeric characters");
+        if (!isAlphanumeric(userId)) {
+            throw new CoreException(ErrorType.INVALID_USER_ID_FORMAT);
         }
     }
 
-    private void validateGender(String gender) {
-        if (gender == null || gender.trim().isEmpty()) {
-            throw new IllegalArgumentException("Gender cannot be null or empty");
-        }
-        if (!gender.equals("MALE") && !gender.equals("FEMALE")) {
-            throw new IllegalArgumentException("Invalid gender. Must be MALE or FEMALE");
+    private void validateGender(Gender gender) {
+        if (gender == null) {
+            throw new CoreException(ErrorType.INVALID_GENDER);
         }
     }
 
     private void validateBirthDate(LocalDate birthDate) {
         if (birthDate == null) {
-            throw new IllegalArgumentException("Birth date cannot be null");
+            throw new CoreException(ErrorType.INVALID_BIRTHDAY);
         }
         if (birthDate.isAfter(LocalDate.now())) {
-            throw new IllegalArgumentException("Birth date cannot be in the future");
+            throw new CoreException(ErrorType.INVALID_BIRTHDAY_FORMAT);
         }
     }
 
-    private void validateEmail(String email) {
-        if (email == null || email.trim().isEmpty()) {
-            throw new IllegalArgumentException("Email cannot be null or empty");
-        }
-        String emailPattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
-        if (!Pattern.matches(emailPattern, email)) {
-            throw new IllegalArgumentException("Invalid email format");
+    private void validateEmail(Email email) {
+        if (email == null) {
+            throw new CoreException(ErrorType.INVALID_EMAIL);
         }
     }
 
@@ -78,16 +98,20 @@ public class User extends BaseEntity {
         return userId;
     }
 
-    public String getGender() {
+    public Gender getGender() {
         return gender;
+    }
+    
+    public Email getEmail() {
+        return email;
+    }
+    
+    public Point getPoint() {
+        return point;
     }
 
     public LocalDate getBirthDate() {
         return birthDate;
-    }
-
-    public String getEmail() {
-        return email;
     }
 
     @Override

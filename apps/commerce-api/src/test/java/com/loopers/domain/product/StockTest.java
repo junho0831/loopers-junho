@@ -1,5 +1,6 @@
 package com.loopers.domain.product;
 
+import com.loopers.support.error.CoreException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -22,8 +23,7 @@ class StockTest {
     void createStockWithNegativeQuantity() {
         // when & then
         assertThatThrownBy(() -> new Stock(-1))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Stock quantity cannot be negative");
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -48,8 +48,7 @@ class StockTest {
 
         // when & then
         assertThatThrownBy(() -> stock.decrease(10))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Insufficient stock");
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -60,8 +59,7 @@ class StockTest {
 
         // when & then
         assertThatThrownBy(() -> stock.decrease(-1))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Decrease amount cannot be negative");
+                .isInstanceOf(CoreException.class);
     }
 
     @Test

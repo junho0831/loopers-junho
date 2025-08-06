@@ -1,5 +1,7 @@
 package com.loopers.domain.product;
 
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import jakarta.persistence.Embeddable;
 import java.util.Objects;
 
@@ -15,7 +17,7 @@ public class Money {
 
     public Money(long value) {
         if (value < 0) {
-            throw new IllegalArgumentException("Money cannot be negative.");
+            throw new CoreException(ErrorType.BAD_REQUEST, "금액은 0원 이상이어야 합니다");
         }
         this.value = value;
     }
@@ -30,14 +32,14 @@ public class Money {
 
     public Money subtract(Money other) {
         if (this.value < other.value) {
-            throw new IllegalArgumentException("Cannot subtract more money than available.");
+            throw new CoreException(ErrorType.BAD_REQUEST, "차감할 금액이 보유 금액보다 큽니다");
         }
         return new Money(this.value - other.value);
     }
 
     public Money multiply(int multiplier) {
         if (multiplier < 0) {
-            throw new IllegalArgumentException("Multiplier cannot be negative.");
+            throw new CoreException(ErrorType.BAD_REQUEST, "곱하기 값은 0 이상이어야 합니다");
         }
         return new Money(this.value * multiplier);
     }
