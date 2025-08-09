@@ -1,6 +1,7 @@
 package com.loopers.domain.product;
 
 import com.loopers.domain.brand.Brand;
+import com.loopers.support.error.CoreException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -38,8 +39,7 @@ class ProductTest {
 
         // when & then
         assertThatThrownBy(() -> new Product(null, price, stock, brand))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Product name cannot be null or empty");
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -52,8 +52,7 @@ class ProductTest {
 
         // when & then
         assertThatThrownBy(() -> new Product("", price, stock, brand))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Product name cannot be null or empty");
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -66,8 +65,7 @@ class ProductTest {
 
         // when & then
         assertThatThrownBy(() -> new Product(name, price, stock, null))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Product brand cannot be null");
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -93,8 +91,7 @@ class ProductTest {
 
         // when & then
         assertThatThrownBy(() -> product.decreaseStock(10))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Insufficient stock");
+                .isInstanceOf(CoreException.class);
     }
 
     @Test

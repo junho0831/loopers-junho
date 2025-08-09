@@ -3,6 +3,8 @@ package com.loopers.domain.order;
 import com.loopers.domain.product.Money;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.point.Point;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -17,7 +19,7 @@ public class OrderService {
             OrderItemRequest request = itemRequests.get(i);
             
             if (!product.hasEnoughStock(request.getQuantity())) {
-                throw new IllegalArgumentException("Insufficient stock for product: " + product.getName());
+                throw new CoreException(ErrorType.INSUFFICIENT_STOCK);
             }
         }
     }

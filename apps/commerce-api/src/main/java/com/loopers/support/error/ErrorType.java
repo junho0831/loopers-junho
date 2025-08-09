@@ -36,9 +36,16 @@ public enum ErrorType {
     //상품
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "상품을 찾을 수 없습니다"),
     INVALID_SORT_TYPE(HttpStatus.BAD_REQUEST, "INVALID_SORT_TYPE", "잘못된 정렬 타입입니다"),
+    INSUFFICIENT_STOCK(HttpStatus.BAD_REQUEST, "INSUFFICIENT_STOCK", "상품 재고가 부족합니다"),
 
     //브랜드
     BRAND_NOT_FOUND(HttpStatus.NOT_FOUND, "BRAND_NOT_FOUND", "브랜드를 찾을 수 없습니다"),
+
+    //쿠폰
+    COUPON_NOT_FOUND(HttpStatus.NOT_FOUND, "COUPON_NOT_FOUND", "쿠폰을 찾을 수 없습니다"),
+    COUPON_ALREADY_USED(HttpStatus.BAD_REQUEST, "COUPON_ALREADY_USED", "이미 사용된 쿠폰입니다"),
+    COUPON_NOT_OWNED(HttpStatus.FORBIDDEN, "COUPON_NOT_OWNED", "해당 쿠폰을 소유하고 있지 않습니다"),
+    INVALID_COUPON_CONDITION(HttpStatus.BAD_REQUEST, "INVALID_COUPON_CONDITION", "쿠폰 사용 조건을 만족하지 않습니다"),
 
     //주문
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "주문을 찾을 수 없습니다");

@@ -1,35 +1,22 @@
-package com.loopers.domain.example;
+package com.loopers.domain.user;
 
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import jakarta.persistence.*;
 
-@Entity(name = "ExamplePoint")
-@Table(name = "example_points")
+@Embeddable
 public class Point {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String userId;
-
-    @Column(nullable = false)
     private int amount;
 
-    public Point(String userId, int amount) {
-        validate(userId, amount);
-        this.userId = userId;
+    public Point(int amount) {
+        validate(amount);
         this.amount = amount;
     }
 
     protected Point() {}
 
-    private void validate(String userId, int amount) {
-        if (userId == null || userId.isBlank()) {
-            throw new CoreException(ErrorType.INVALID_USER_ID);
-        }
+    private void validate(int amount) {
         if (amount < 0) {
             throw new CoreException(ErrorType.INVALID_CHARGE_AMOUNT);
         }
@@ -50,14 +37,6 @@ public class Point {
             throw new CoreException(ErrorType.INSUFFICIENT_POINTS);
         }
         this.amount -= useAmount;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getUserId() {
-        return userId;
     }
 
     public int getAmount() {

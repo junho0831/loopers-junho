@@ -1,6 +1,9 @@
 package com.loopers.application.user;
 
 import com.loopers.domain.user.User;
+import com.loopers.domain.user.Gender;
+import com.loopers.domain.user.Email;
+import com.loopers.domain.user.Point;
 import com.loopers.infrastructure.user.JpaUserRepository;
 
 import java.time.LocalDate;
@@ -22,7 +25,7 @@ public class UserFacade {
         if (userRepository.findByUserId(userId).isPresent()) {
             throw new IllegalArgumentException("User with this ID already exists.");
         }
-        User newUser = new User(userId, gender, birthDate, email);
+        User newUser = new User(userId, Gender.valueOf(gender), birthDate, new Email(email), new Point(0));
         return userRepository.save(newUser);
     }
 

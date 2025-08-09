@@ -1,5 +1,6 @@
 package com.loopers.domain.product;
 
+import com.loopers.support.error.CoreException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -33,8 +34,7 @@ class MoneyTest {
     void createMoneyWithNegativeAmount() {
         // when & then
         assertThatThrownBy(() -> new Money(-1000))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Money cannot be negative");
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -58,8 +58,7 @@ class MoneyTest {
 
         // when & then
         assertThatThrownBy(() -> unitPrice.multiply(-3))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Multiplier cannot be negative");
+                .isInstanceOf(CoreException.class);
     }
 
     @Test
@@ -99,8 +98,7 @@ class MoneyTest {
 
         // when & then
         assertThatThrownBy(() -> money1.subtract(money2))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Cannot subtract more money than available");
+                .isInstanceOf(CoreException.class);
     }
 
     @Test

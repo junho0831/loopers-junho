@@ -21,9 +21,9 @@ public class UserController {
     public ResponseEntity<User> registerUser(@RequestBody User request) {
         User user = userFacade.registerUser(
                 request.getUserId(),
-                request.getGender(),
+                request.getGender().name(),
                 request.getBirthDate(),
-                request.getEmail()
+                request.getEmail().getValue()
         );
 
         return ResponseEntity.ok(user);

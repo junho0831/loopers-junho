@@ -2,6 +2,8 @@ package com.loopers.domain.product;
 
 import com.loopers.domain.BaseEntity;
 import com.loopers.domain.brand.Brand;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToOne;
@@ -44,31 +46,31 @@ public class Product extends BaseEntity {
 
     private void validateName(String name) {
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Product name cannot be null or empty");
+            throw new CoreException(ErrorType.BAD_REQUEST, "상품명은 필수입니다");
         }
     }
 
     private void validatePrice(Money price) {
         if (price == null) {
-            throw new IllegalArgumentException("Product price cannot be null");
+            throw new CoreException(ErrorType.BAD_REQUEST, "상품 가격은 필수입니다");
         }
         if (price.getValue() < 0) {
-            throw new IllegalArgumentException("Product price cannot be negative");
+            throw new CoreException(ErrorType.BAD_REQUEST, "상품 가격은 0원 이상이어야 합니다");
         }
     }
 
     private void validateStock(Stock stock) {
         if (stock == null) {
-            throw new IllegalArgumentException("Product stock cannot be null");
+            throw new CoreException(ErrorType.BAD_REQUEST, "재고 정보는 필수입니다");
         }
         if (stock.getQuantity() < 0) {
-            throw new IllegalArgumentException("Product stock cannot be negative");
+            throw new CoreException(ErrorType.BAD_REQUEST, "재고는 0개 이상이어야 합니다");
         }
     }
 
     private void validateBrand(Brand brand) {
         if (brand == null) {
-            throw new IllegalArgumentException("Product brand cannot be null");
+            throw new CoreException(ErrorType.BAD_REQUEST, "브랜드 정보는 필수입니다");
         }
     }
 
