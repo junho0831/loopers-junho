@@ -14,8 +14,17 @@ services:
     volumes:
       - mysql-8-data:/var/lib/mysql
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+
 volumes:
   mysql-8-data:
+  redis-data:
 
 networks:
   default:
