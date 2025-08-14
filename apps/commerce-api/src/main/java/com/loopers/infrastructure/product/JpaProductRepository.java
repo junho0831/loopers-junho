@@ -18,12 +18,13 @@ import java.util.Optional;
 @Repository
 public interface JpaProductRepository extends JpaRepository<Product, Long> {
 
+    // 브랜드별 조회 (기본)
     @Query("SELECT p FROM Product p WHERE p.brand.id = :brandId")
     Page<Product> findByBrandId(@Param("brandId") Long brandId, Pageable pageable);
-
-    // 브랜드별 정렬 조회
-    @Query("SELECT p FROM Product p WHERE p.brand.id = :brandId")
-    Page<Product> findByBrandIdOrderBy(@Param("brandId") Long brandId, Pageable pageable);
+    
+    // ID로 단일 상품 조회 (PK 인덱스 활용) - JPA 기본 제공하지만 명시적으로 정의
+    @Query("SELECT p FROM Product p WHERE p.id = :id")
+    Optional<Product> findByProductId(@Param("id") Long id);
 
     // N+1 문제 해결: 브랜드 정보와 함께 조회
     @Query("SELECT p FROM Product p JOIN FETCH p.brand WHERE p.id = :id")
