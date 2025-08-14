@@ -111,7 +111,7 @@ class ProductServiceIntegrationTest {
         Long brandId = testBrand.getId();
         Pageable pageable = PageRequest.of(0, 10);
         Page<Product> mockPage = new PageImpl<>(List.of(testProduct1, testProduct2), pageable, 2);
-        when(productRepository.findByBrandIdOrderBy(eq(brandId), any(Pageable.class))).thenReturn(mockPage);
+        when(productRepository.findByBrandId(eq(brandId), any(Pageable.class))).thenReturn(mockPage);
 
         // when
         Page<Product> result = productFacade.getProducts(ProductSortType.LATEST_DESC, brandId, pageable);
