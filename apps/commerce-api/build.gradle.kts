@@ -13,6 +13,13 @@ dependencies {
     // cache (Redis)
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-cache")
+    
+    // resilience4j
+    implementation("io.github.resilience4j:resilience4j-spring-boot3")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+    
+    // feign client
+    implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
 
     // querydsl
 //    annotationProcessor("com.querydsl:querydsl-apt::jakarta")
@@ -21,4 +28,7 @@ dependencies {
 
     // test-fixtures
     testImplementation(testFixtures(project(":modules:jpa")))
+    
+    // mock web server for external API testing
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }
