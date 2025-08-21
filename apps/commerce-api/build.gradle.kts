@@ -31,4 +31,7 @@ dependencies {
     
     // mock web server for external API testing
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    
+    // awaitility for async testing
+    testImplementation("org.awaitility:awaitility:4.2.0")
 }
