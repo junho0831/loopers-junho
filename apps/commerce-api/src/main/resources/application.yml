@@ -34,6 +34,33 @@ spring:
           max-idle: 8
           min-idle: 0
 
+resilience4j:
+  circuitbreaker:
+    instances:
+      pgClient:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-duration-threshold: 3s
+        slow-call-rate-threshold: 50
+        record-exceptions:
+          - java.lang.RuntimeException
+          - java.util.concurrent.TimeoutException
+          - feign.FeignException
+  retry:
+    instances:
+      pgClient:
+        max-attempts: 3
+        wait-duration: 1s
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - java.lang.RuntimeException
+          - java.util.concurrent.TimeoutException
+          - feign.RetryableException
+        ignore-exceptions:
+          - java.lang.IllegalArgumentException
+
 springdoc:
   use-fqn: true
   swagger-ui:
