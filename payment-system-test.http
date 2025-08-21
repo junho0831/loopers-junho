@@ -1,0 +1,291 @@
+### 🏪 루프팩 BE L2 - 결제시스템 API 테스트
+### 외부 PG 연동 및 Resilience 패턴이 적용된 결제시스템 테스트
+
+### 환경 변수 설정
+@commerce_base_url = http://localhost:8080
+@pg_base_url = http://localhost:8082
+@user_id = test-user-1
+
+###
+### 📋 사전 준비 - 테스트 데이터 생성 (DB에서 실행)
+### 
+### 다음 SQL을 DB에 먼저 실행하세요:
+###
+### -- 브랜드 생성
+### INSERT INTO brand (id, name, created_at, updated_at) 
+### VALUES (1, '삼성', NOW(), NOW());
+### 
+### -- 상품 생성  
+### INSERT INTO product (id, name, value, quantity, brand_id, likes_count, created_at, updated_at)
+### VALUES (1, '갤럭시 S24', 1200000, 100, 1, 0, NOW(), NOW());
+###
+### -- 포인트 생성
+### INSERT INTO point (id, user_id, point_balance, created_at, updated_at)
+### VALUES (1, 'test-user-1', 5000000, NOW(), NOW());
+
+###
+### 🏪 Commerce API 테스트
+###
+
+### 1. 주문 생성 (결제 자동 생성 + PG 호출)
+POST {{commerce_base_url}}/api/v1/orders
+Content-Type: application/json
+X-USER-ID: {{user_id}}
+
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 1
+    }
+  ]
+}
+
+###
+### 2. 주문 조회
+GET {{commerce_base_url}}/api/v1/orders
+X-USER-ID: {{user_id}}
+
+###
+### 3. 특정 주문 조회 (orderId 수정 필요)
+GET {{commerce_base_url}}/api/v1/orders/1
+X-USER-ID: {{user_id}}
+
+###
+### 4. 결제 콜백 - 성공
+POST {{commerce_base_url}}/api/v1/payments/callback
+Content-Type: application/json
+
+{
+  "transactionId": "TXN-SUCCESS-12345",
+  "orderId": "1",
+  "status": "SUCCESS",
+  "message": "결제 성공"
+}
+
+###
+### 5. 결제 콜백 - 실패
+POST {{commerce_base_url}}/api/v1/payments/callback
+Content-Type: application/json
+
+{
+  "transactionId": "TXN-FAILED-67890",
+  "orderId": "2", 
+  "status": "FAILED",
+  "message": "카드 한도 초과"
+}
+
+###
+###
+### 🏦 PG Simulator 테스트  
+###
+
+### 1. 결제 요청 - 성공 케이스 (60% 확률)
+POST {{pg_base_url}}/api/v1/payments
+Content-Type: application/json
+X-USER-ID: {{user_id}}
+
+{
+  "orderId": "ORDER-TEST-001",
+  "cardType": "SAMSUNG",
+  "cardNo": "1234-5678-9012-3456",
+  "amount": 1200000,
+  "callbackUrl": "{{commerce_base_url}}/api/v1/payments/callback"
+}
+
+###
+### 2. 결제 요청 - 여러 번 테스트 (랜덤 결과)
+POST {{pg_base_url}}/api/v1/payments
+Content-Type: application/json
+X-USER-ID: {{user_id}}
+
+{
+  "orderId": "ORDER-TEST-002",
+  "cardType": "SAMSUNG", 
+  "cardNo": "1234-5678-9012-3456",
+  "amount": 500000,
+  "callbackUrl": "{{commerce_base_url}}/api/v1/payments/callback"
+}
+
+###
+### 3. 거래 상세 조회 (transactionKey 수정 필요)
+GET {{pg_base_url}}/api/v1/payments/20250821:TR:abcdef
+X-USER-ID: {{user_id}}
+
+###
+### 4. 주문별 거래 조회  
+GET {{pg_base_url}}/api/v1/payments?orderId=ORDER-TEST-001
+X-USER-ID: {{user_id}}
+
+###
+###
+### 🛡️ Resilience 패턴 테스트
+###
+
+### 1. 서킷브레이커 테스트 - 연속 요청 (이걸 빠르게 10번 실행)
+POST {{pg_base_url}}/api/v1/payments
+Content-Type: application/json
+X-USER-ID: {{user_id}}
+
+{
+  "orderId": "CIRCUIT-TEST-{{$random.integer(1000, 9999)}}",
+  "cardType": "SAMSUNG",
+  "cardNo": "1234-5678-9012-3456", 
+  "amount": 10000,
+  "callbackUrl": "{{commerce_base_url}}/api/v1/payments/callback"
+}
+
+###
+### 2. 재시도 테스트 - PG 지연 확인
+POST {{pg_base_url}}/api/v1/payments
+Content-Type: application/json
+X-USER-ID: {{user_id}}
+
+{
+  "orderId": "RETRY-TEST-{{$random.integer(1000, 9999)}}",
+  "cardType": "SAMSUNG",
+  "cardNo": "1234-5678-9012-3456",
+  "amount": 20000,
+  "callbackUrl": "{{commerce_base_url}}/api/v1/payments/callback"
+}
+
+###
+###
+### 🔄 전체 결제 플로우 테스트 시나리오
+###
+
+### 시나리오 1: 정상 결제 완료
+### Step 1: 주문 생성
+POST {{commerce_base_url}}/api/v1/orders
+Content-Type: application/json
+X-USER-ID: test-user-scenario1
+
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 1
+    }
+  ]
+}
+
+### Step 2: 수동 PG 결제 (실제 환경에서는 자동)
+POST {{pg_base_url}}/api/v1/payments  
+Content-Type: application/json
+X-USER-ID: test-user-scenario1
+
+{
+  "orderId": "1",
+  "cardType": "SAMSUNG",
+  "cardNo": "1234-5678-9012-3456",
+  "amount": 1200000,
+  "callbackUrl": "{{commerce_base_url}}/api/v1/payments/callback"
+}
+
+### Step 3: 결제 성공 콜백
+POST {{commerce_base_url}}/api/v1/payments/callback
+Content-Type: application/json
+
+{
+  "transactionId": "SCENARIO1-SUCCESS",
+  "orderId": "1", 
+  "status": "SUCCESS",
+  "message": "결제 성공"
+}
+
+###
+### 시나리오 2: 결제 실패
+### Step 1: 주문 생성
+POST {{commerce_base_url}}/api/v1/orders
+Content-Type: application/json
+X-USER-ID: test-user-scenario2
+
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 1  
+    }
+  ]
+}
+
+### Step 2: 결제 실패 콜백
+POST {{commerce_base_url}}/api/v1/payments/callback
+Content-Type: application/json
+
+{
+  "transactionId": "SCENARIO2-FAILED",
+  "orderId": "2",
+  "status": "FAILED", 
+  "message": "카드 한도 초과"
+}
+
+###
+### 🔍 상태 확인 및 모니터링
+###
+
+### 1. 사용자 주문 목록
+GET {{commerce_base_url}}/api/v1/orders
+X-USER-ID: {{user_id}}
+
+###
+### 2. 특정 주문 상태
+GET {{commerce_base_url}}/api/v1/orders/1
+
+###
+### 3. PG 시뮬레이터 상태 (비공식)
+GET {{pg_base_url}}/
+
+###
+###
+### 📊 성능 및 부하 테스트
+###
+
+### 동시성 테스트 - 이걸 여러 탭에서 동시 실행
+POST {{commerce_base_url}}/api/v1/orders
+Content-Type: application/json
+X-USER-ID: concurrent-user-{{$random.integer(1, 100)}}
+
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 1
+    }
+  ]
+}
+
+### 
+### 🚨 장애 시뮬레이션
+### 
+
+### PG 서버 다운 시뮬레이션 - PG 서버 종료 후 실행
+POST {{commerce_base_url}}/api/v1/orders
+Content-Type: application/json
+X-USER-ID: failover-test
+
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 1
+    }
+  ]
+}
+
+###
+### 📝 테스트 결과 확인 포인트:
+###
+### ✅ 주문 생성 시 Payment 엔티티도 함께 생성되는지 확인
+### ✅ PG 호출이 실제로 이루어지는지 로그 확인  
+### ✅ 타임아웃 발생 시 PENDING 상태로 유지되는지 확인
+### ✅ 서킷브레이커 작동 시 즉시 폴백 응답하는지 확인
+### ✅ 콜백 처리 시 Payment와 Order 상태 동기화 확인
+### ✅ 스케줄러가 PENDING 결제를 복구하는지 확인 (5분 대기)
+### 
+### 🎯 성공 기준:
+### - 주문 생성: PENDING 상태로 생성
+### - PG 연동: 실제 API 호출 및 응답 처리
+### - 콜백 처리: 결제/주문 상태 정확히 업데이트
+### - Resilience: 장애 상황에서도 시스템 안정성 유지
+###

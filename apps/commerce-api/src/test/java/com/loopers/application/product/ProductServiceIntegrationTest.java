@@ -43,6 +43,9 @@ class ProductServiceIntegrationTest {
     @Mock
     private ProductService productService;
 
+    @Mock
+    private ProductCacheService cacheService;
+
     @InjectMocks
     private ProductFacade productFacade;
 
@@ -78,6 +81,7 @@ class ProductServiceIntegrationTest {
     void getProductDetail_WithValidProductId_ReturnsProductDetail() {
         // given
         Long productId = 1L;
+        when(cacheService.getProductDetail(productId)).thenReturn(null); // 캐시 미스 시뮬레이션
         when(productRepository.findByIdWithBrand(productId)).thenReturn(Optional.of(testProduct1));
         when(productService.createProductDetail(any(), any())).thenReturn(new com.loopers.domain.product.ProductDetail(testProduct1, testBrand));
 

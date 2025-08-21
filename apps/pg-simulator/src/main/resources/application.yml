@@ -22,7 +22,6 @@ spring:
       - jpa.yml
       - logging.yml
       - monitoring.yml
-  # Redis configuration
   data:
     redis:
       host: localhost
@@ -33,33 +32,10 @@ spring:
           max-active: 8
           max-idle: 8
           min-idle: 0
-
-resilience4j:
-  circuitbreaker:
-    instances:
-      pgClient:
-        sliding-window-size: 10
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
-        permitted-number-of-calls-in-half-open-state: 3
-        slow-call-duration-threshold: 3s
-        slow-call-rate-threshold: 50
-        record-exceptions:
-          - java.lang.RuntimeException
-          - java.util.concurrent.TimeoutException
-          - feign.FeignException
-  retry:
-    instances:
-      pgClient:
-        max-attempts: 3
-        wait-duration: 1s
-        exponential-backoff-multiplier: 2
-        retry-exceptions:
-          - java.lang.RuntimeException
-          - java.util.concurrent.TimeoutException
-          - feign.RetryableException
-        ignore-exceptions:
-          - java.lang.IllegalArgumentException
+datasource:
+  mysql-jpa:
+    main:
+      jdbc-url: jdbc:mysql://localhost:3306/paymentgateway
 
 springdoc:
   use-fqn: true
@@ -72,11 +48,25 @@ spring:
     activate:
       on-profile: local, test
 
+server:
+  port: 8082
+
+management:
+  server:
+    port: 8083
+
 ---
 spring:
   config:
     activate:
       on-profile: dev
+
+server:
+  port: 8082
+
+management:
+  server:
+    port: 8083
 
 ---
 spring:
