@@ -57,4 +57,29 @@ public class ProductService {
         }
         productRepository.saveAll(products);
     }
+    
+    public Product findByIdWithBrand(Long productId) {
+        return productRepository.findByIdWithBrand(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
+    }
+    
+    public org.springframework.data.domain.Page<Product> findByBrandId(Long brandId, org.springframework.data.domain.Pageable pageable) {
+        return productRepository.findByBrandId(brandId, pageable);
+    }
+    
+    public org.springframework.data.domain.Page<Product> findAll(org.springframework.data.domain.Pageable pageable) {
+        return productRepository.findAll(pageable);
+    }
+    
+    public java.util.Optional<Product> findByProductId(Long productId) {
+        return productRepository.findByProductId(productId);
+    }
+    
+    public Product saveProduct(Product product) {
+        return productRepository.save(product);
+    }
+    
+    public java.util.Optional<Product> findById(Long productId) {
+        return productRepository.findById(productId);
+    }
 }

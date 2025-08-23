@@ -4,7 +4,7 @@ import com.loopers.domain.user.User;
 import com.loopers.domain.user.Gender;
 import com.loopers.domain.user.Email;
 import com.loopers.domain.user.Point;
-import com.loopers.infrastructure.user.JpaUserRepository;
+import com.loopers.domain.user.UserService;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -15,21 +15,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class UserFacade {
-    private final JpaUserRepository userRepository;
+    private final UserService userService;
 
-    public UserFacade(JpaUserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserFacade(UserService userService) {
+        this.userService = userService;
     }
 
     public User registerUser(String userId, String gender, LocalDate birthDate, String email) {
-        if (userRepository.findByUserId(userId).isPresent()) {
+        if (userService.findByUserId(userId).isPresent()) {
             throw new IllegalArgumentException("User with this ID already exists.");
         }
         User newUser = new User(userId, Gender.valueOf(gender), birthDate, new Email(email), new Point(0));
-        return userRepository.save(newUser);
+        return userService.saveUser(newUser);
     }
 
     public Optional<User> getUserInfo(String userId) {
-        return userRepository.findByUserId(userId);
+        return userService.findByUserId(userId);
     }
 }

@@ -10,8 +10,6 @@ import com.loopers.domain.point.PointService;
 import com.loopers.domain.product.Money;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductService;
-import com.loopers.infrastructure.order.JpaOrderRepository;
-import com.loopers.infrastructure.payment.PaymentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,26 +24,21 @@ import java.util.Optional;
 public class OrderFacade {
     private static final Logger log = LoggerFactory.getLogger(OrderFacade.class);
     
-    private final JpaOrderRepository orderRepository;
     private final ProductService productService;
     private final PointService pointService;
     private final OrderService orderService;
     private final CouponService couponService;
     private final PaymentService paymentService;
-    private final PaymentRepository paymentRepository;
     private final PaymentGateway paymentGateway;
 
-    public OrderFacade(JpaOrderRepository orderRepository, ProductService productService,
+    public OrderFacade(ProductService productService,
                        PointService pointService, OrderService orderService, CouponService couponService,
-                       PaymentService paymentService, PaymentRepository paymentRepository, 
-                       PaymentGateway paymentGateway) {
-        this.orderRepository = orderRepository;
+                       PaymentService paymentService, PaymentGateway paymentGateway) {
         this.productService = productService;
         this.pointService = pointService;
         this.orderService = orderService;
         this.couponService = couponService;
         this.paymentService = paymentService;
-        this.paymentRepository = paymentRepository;
         this.paymentGateway = paymentGateway;
     }
 
@@ -95,7 +88,7 @@ public class OrderFacade {
             // 6. 주문 생성 및 저장
             List<OrderItem> orderItems = orderService.createOrderItems(products, itemRequests);
             Order newOrder = new Order(userId, orderItems, finalAmount);
-            Order savedOrder = orderRepository.save(newOrder);
+            Order savedOrder = orderService.saveOrder(newOrder);
 
             // 7. 결제 생성 및 PG 호출
             try {
@@ -106,7 +99,7 @@ public class OrderFacade {
                     "SAMSUNG", // 기본 카드타입 (실제로는 요청에서 받아야 함)
                     "1234-5678-9012-3456" // 기본 카드번호 (실제로는 요청에서 받아야 함)
                 );
-                paymentRepository.save(payment);
+                paymentService.savePayment(payment);
                 
                 // PG 결제 요청
                 PaymentRequest paymentRequest = new PaymentRequest(
@@ -122,7 +115,7 @@ public class OrderFacade {
                 
                 if (pgResponse.isSuccess() && pgResponse.getTransactionId() != null) {
                     payment.updateTransactionId(pgResponse.getTransactionId());
-                    paymentRepository.save(payment);
+                    paymentService.savePayment(payment);
                 }
                 
             } catch (Exception e) {
@@ -147,11 +140,11 @@ public class OrderFacade {
     }
 
     public Optional<Order> getOrderById(Long orderId) {
-        return orderRepository.findById(orderId);
+        return orderService.getOrderById(orderId);
     }
 
     public List<Order> getUserOrders(String userId) {
-        return orderRepository.findByUserId(userId);
+        return orderService.getUserOrders(userId);
     }
 
 

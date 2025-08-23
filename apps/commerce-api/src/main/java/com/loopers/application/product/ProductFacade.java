@@ -3,7 +3,6 @@ package com.loopers.application.product;
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.*;
-import com.loopers.infrastructure.product.JpaProductRepository;
 import com.loopers.interfaces.api.ProductDetailResponse;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -17,14 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class ProductFacade {
-    private final JpaProductRepository productRepository;
     private final BrandService brandService;
     private final ProductService productService;
     private final ProductCacheService cacheService;
 
-    public ProductFacade(JpaProductRepository productRepository, BrandService brandService, 
+    public ProductFacade(BrandService brandService, 
                         ProductService productService, ProductCacheService cacheService) {
-        this.productRepository = productRepository;
         this.brandService = brandService;
         this.productService = productService;
         this.cacheService = cacheService;
@@ -40,8 +37,7 @@ public class ProductFacade {
         
         // 2. 캐시 미스 시 DB에서 조회 (PK 인덱스 활용)
         // N+1 문제 해결: 브랜드 정보와 함께 한 번에 조회
-        Product product = productRepository.findByIdWithBrand(productId)
-                .orElseThrow(() -> new CoreException(ErrorType.PRODUCT_NOT_FOUND));
+        Product product = productService.findByIdWithBrand(productId);
         
         ProductDetail productDetail = productService.createProductDetail(product, product.getBrand());
         ProductDetailResponse response = ProductDetailResponse.from(productDetail);
@@ -63,16 +59,16 @@ public class ProductFacade {
         
         // 인덱스를 활용한 최적화된 쿼리 실행
         if (brandId != null) {
-            return productRepository.findByBrandId(brandId, sortedPageable);
+            return productService.findByBrandId(brandId, sortedPageable);
         } else {
-            return productRepository.findAll(sortedPageable);
+            return productService.findAll(sortedPageable);
         }
     }
     
     // ID로 단일 상품 조회 (PK 인덱스 최적화)
     @Transactional(readOnly = true)
     public Product getProductById(Long productId) {
-        return productRepository.findByProductId(productId)
+        return productService.findByProductId(productId)
                 .orElseThrow(() -> new CoreException(ErrorType.PRODUCT_NOT_FOUND));
     }
 
@@ -81,13 +77,13 @@ public class ProductFacade {
         
         Brand brand = brandService.loadBrand(brandId);
         Product product = new Product(name, new Money(price), new Stock(stock), brand);
-        return productRepository.save(product);
+        return productService.saveProduct(product);
     }
 
     public void decreaseProductStock(Long productId, int quantity) {
-        Product product = productRepository.findById(productId)
+        Product product = productService.findById(productId)
                 .orElseThrow(() -> new CoreException(ErrorType.PRODUCT_NOT_FOUND));
         product.decreaseStock(quantity);
-        productRepository.save(product);
+        productService.saveProduct(product);
     }
 }
