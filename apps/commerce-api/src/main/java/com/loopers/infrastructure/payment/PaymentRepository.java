@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,11 +16,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByStatus(PaymentStatus status);
 
     @Query("SELECT p FROM Payment p WHERE p.status = 'PENDING' AND p.createdAt < :threshold")
-    List<Payment> findPendingPaymentsOlderThan(@Param("threshold") LocalDateTime threshold);
+    List<Payment> findPendingPaymentsOlderThan(@Param("threshold") ZonedDateTime threshold);
     
     // 기존 메서드 호환을 위한 default 메서드
     default List<Payment> findPendingPaymentsOlderThan(int minutes) {
-        LocalDateTime threshold = LocalDateTime.now().minusMinutes(minutes);
+        ZonedDateTime threshold = ZonedDateTime.now().minusMinutes(minutes);
         return findPendingPaymentsOlderThan(threshold);
     }
 }

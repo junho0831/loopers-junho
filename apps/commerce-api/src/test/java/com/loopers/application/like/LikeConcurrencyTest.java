@@ -73,7 +73,7 @@ public class LikeConcurrencyTest {
             
             executor.submit(() -> {
                 try {
-                    likeFacade.addLike(userId, testProduct.getId());
+                    likeFacade.addLike(userId, testProduct.getId(), "test-session", "test-agent", "127.0.0.1");
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     failureCount.incrementAndGet();
@@ -121,7 +121,7 @@ public class LikeConcurrencyTest {
         // 절반의 사용자는 미리 좋아요를 누른 상태로 만들기
         for (int i = 0; i < userCount / 2; i++) {
             String userId = "pre-liked-user-" + i;
-            likeFacade.addLike(userId, testProduct.getId());
+            likeFacade.addLike(userId, testProduct.getId(), "test-session", "test-agent", "127.0.0.1");
         }
 
         // when - 절반은 좋아요, 절반은 좋아요 취소를 동시 요청
@@ -133,12 +133,12 @@ public class LikeConcurrencyTest {
                     if (userIndex < userCount / 2) {
                         // 이미 좋아요를 누른 사용자들이 좋아요 취소
                         String userId = "pre-liked-user-" + userIndex;
-                        likeFacade.removeLike(userId, testProduct.getId());
+                        likeFacade.removeLike(userId, testProduct.getId(), "test-session", "test-agent", "127.0.0.1");
                         unlikeSuccessCount.incrementAndGet();
                     } else {
                         // 새로운 사용자들이 좋아요
                         String userId = "new-user-" + userIndex;
-                        likeFacade.addLike(userId, testProduct.getId());
+                        likeFacade.addLike(userId, testProduct.getId(), "test-session", "test-agent", "127.0.0.1");
                         likeSuccessCount.incrementAndGet();
                     }
                 } catch (Exception e) {
@@ -189,7 +189,7 @@ public class LikeConcurrencyTest {
         for (int i = 0; i < attemptCount; i++) {
             executor.submit(() -> {
                 try {
-                    likeFacade.addLike(userId, testProduct.getId());
+                    likeFacade.addLike(userId, testProduct.getId(), "test-session", "test-agent", "127.0.0.1");
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     // 멱등성으로 인해 추가 시도는 무시되거나 예외가 발생할 수 있음

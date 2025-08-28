@@ -4,6 +4,7 @@ import com.loopers.domain.payment.Payment;
 import com.loopers.domain.payment.PaymentService;
 import com.loopers.domain.payment.PaymentGateway;
 import com.loopers.domain.payment.PaymentStatusResponse;
+import feign.FeignException;
 import com.loopers.domain.order.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -102,8 +103,8 @@ public class PaymentRecoveryScheduler {
                 paymentService.failPayment(payment, statusResponse.getMessage());
                 paymentRepository.save(payment);
                 
-                // 주문 상태도 취소로 업데이트
-                updateOrderStatus(payment.getOrderId(), "CANCELLED");
+                // 주문 상태도 결제 실패로 업데이트
+                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED");
                 
                 log.info("PENDING 결제 실패 확인 - paymentId: {}, orderId: {}, reason: {}", 
                         payment.getId(), payment.getOrderId(), statusResponse.getMessage());
@@ -116,6 +117,16 @@ public class PaymentRecoveryScheduler {
                 return true;
             }
             
+        } catch (feign.FeignException.NotFound e) {
+            // 404: PG에 해당 주문의 결제 정보가 없음 - 결제 실패로 처리
+            log.warn("PG에 결제 정보 없음 (404) - 결제 실패로 처리: paymentId={}, orderId={}", 
+                    payment.getId(), payment.getOrderId());
+            
+            paymentService.failPayment(payment, "PG에 결제 정보가 존재하지 않음");
+            paymentRepository.save(payment);
+            updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED");
+            return true;
+            
         } catch (Exception e) {
             log.error("결제 복구 처리 실패 - paymentId: {}, orderId: {}", 
                     payment.getId(), payment.getOrderId(), e);
@@ -124,7 +135,7 @@ public class PaymentRecoveryScheduler {
             if (isPaymentExpired(payment, 10)) {
                 paymentService.failPayment(payment, "PG 응답 타임아웃 - 자동 실패 처리");
                 paymentRepository.save(payment);
-                updateOrderStatus(payment.getOrderId(), "CANCELLED");
+                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED");
                 
                 log.warn("만료된 PENDING 결제 자동 실패 처리 - paymentId: {}, orderId: {}", 
                         payment.getId(), payment.getOrderId());
@@ -146,6 +157,8 @@ public class PaymentRecoveryScheduler {
                             order.complete();
                         } else if ("CANCELLED".equals(status)) {
                             order.cancel();
+                        } else if ("PAYMENT_FAILED".equals(status)) {
+                            order.failPayment();
                         }
                         orderRepository.save(order);
                         log.debug("주문 상태 업데이트 완료 - orderId: {}, status: {}", orderId, status);
