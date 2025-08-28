@@ -2,39 +2,51 @@ package com.loopers.application.order;
 
 import com.loopers.domain.coupon.CouponService;
 import com.loopers.domain.coupon.UserCoupon;
-import com.loopers.domain.order.Order;
-import com.loopers.domain.order.OrderItem;
+import com.loopers.domain.order.*;
 import com.loopers.domain.order.OrderItemRequest;
-import com.loopers.domain.order.OrderRequest;
-import com.loopers.domain.order.OrderService;
+import com.loopers.domain.payment.*;
 import com.loopers.domain.point.Point;
 import com.loopers.domain.point.PointService;
 import com.loopers.domain.product.Money;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductService;
 import com.loopers.infrastructure.order.JpaOrderRepository;
+import com.loopers.infrastructure.payment.PaymentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 @Transactional
 public class OrderFacade {
+    private static final Logger log = LoggerFactory.getLogger(OrderFacade.class);
+    
     private final JpaOrderRepository orderRepository;
     private final ProductService productService;
     private final PointService pointService;
     private final OrderService orderService;
     private final CouponService couponService;
+    private final PaymentService paymentService;
+    private final PaymentRepository paymentRepository;
+    private final PaymentGateway paymentGateway;
 
     public OrderFacade(JpaOrderRepository orderRepository, ProductService productService,
-            PointService pointService, OrderService orderService, CouponService couponService) {
+                       PointService pointService, OrderService orderService, CouponService couponService,
+                       PaymentService paymentService, PaymentRepository paymentRepository, 
+                       PaymentGateway paymentGateway) {
         this.orderRepository = orderRepository;
         this.productService = productService;
         this.pointService = pointService;
         this.orderService = orderService;
         this.couponService = couponService;
+        this.paymentService = paymentService;
+        this.paymentRepository = paymentRepository;
+        this.paymentGateway = paymentGateway;
     }
 
     /**
@@ -85,7 +97,40 @@ public class OrderFacade {
             Order newOrder = new Order(userId, orderItems, finalAmount);
             Order savedOrder = orderRepository.save(newOrder);
 
-            // 7. 쿠폰 사용 처리 (주문 성공 후)
+            // 7. 결제 생성 및 PG 호출
+            try {
+                Payment payment = paymentService.createPayment(
+                    savedOrder.getId().toString(), 
+                    Long.parseLong(userId), 
+                    BigDecimal.valueOf(finalAmount.getValue()), 
+                    "SAMSUNG", // 기본 카드타입 (실제로는 요청에서 받아야 함)
+                    "1234-5678-9012-3456" // 기본 카드번호 (실제로는 요청에서 받아야 함)
+                );
+                paymentRepository.save(payment);
+                
+                // PG 결제 요청
+                PaymentRequest paymentRequest = new PaymentRequest(
+                    savedOrder.getId().toString(),
+                    "SAMSUNG",
+                    "1234-5678-9012-3456", 
+                    BigDecimal.valueOf(finalAmount.getValue()),
+                    "http://localhost:8080/api/v1/payments/callback"
+                );
+                
+                PaymentResponse pgResponse = paymentGateway.requestPayment(paymentRequest);
+                log.info("PG 결제 요청 완료 - orderId: {}, success: {}", savedOrder.getId(), pgResponse.isSuccess());
+                
+                if (pgResponse.isSuccess() && pgResponse.getTransactionId() != null) {
+                    payment.updateTransactionId(pgResponse.getTransactionId());
+                    paymentRepository.save(payment);
+                }
+                
+            } catch (Exception e) {
+                log.error("PG 결제 요청 실패 - orderId: {}", savedOrder.getId(), e);
+                // PG 호출 실패해도 주문은 PENDING 상태로 유지 (스케줄러가 나중에 처리)
+            }
+
+            // 8. 쿠폰 사용 처리 (주문 성공 후)
             if (userCoupon != null) {
                 couponService.useCoupon(userCoupon, savedOrder.getId());
             }
