@@ -19,15 +19,20 @@
 ### INSERT INTO product (id, name, value, quantity, brand_id, likes_count, created_at, updated_at)
 ### VALUES (1, '갤럭시 S24', 1200000, 100, 1, 0, NOW(), NOW());
 ###
+### -- 사용자 생성
+### INSERT INTO `user` (id, user_id, `value`, gender, created_at, updated_at)
+### VALUES (1, 'test-user-1', 'TestUser1', 'MALE', NOW(), NOW());
+### 
 ### -- 포인트 생성
-### INSERT INTO point (id, user_id, point_balance, created_at, updated_at)
-### VALUES (1, 'test-user-1', 5000000, NOW(), NOW());
+### INSERT INTO point (user_id, point_balance)
+### VALUES ('test-user-1', 5000000);
 
 ###
 ### 🏪 Commerce API 테스트
 ###
 
 ### 1. 주문 생성 (결제 자동 생성 + PG 호출)
+# @no-cookie-jar
 POST {{commerce_base_url}}/api/v1/orders
 Content-Type: application/json
 X-USER-ID: {{user_id}}
@@ -221,6 +226,76 @@ Content-Type: application/json
 }
 
 ###
+### 🎯 Round 7 Quest - ApplicationEvent 테스트
+###
+
+### 📋 이벤트 기반 기능 테스트
+
+### 1. 상품 좋아요 (이벤트 분리: 좋아요 등록 vs 집계 업데이트)
+POST {{commerce_base_url}}/api/v1/products/1/likes
+Content-Type: application/json
+X-USER-ID: {{user_id}}
+
+{}
+
+###
+### 2. 상품 좋아요 취소 (eventual consistency 테스트)
+DELETE {{commerce_base_url}}/api/v1/products/1/likes
+Content-Type: application/json
+X-USER-ID: {{user_id}}
+
+###
+### 3. 상품 조회 (사용자 행동 추적 이벤트)
+GET {{commerce_base_url}}/api/v1/products/1
+X-USER-ID: {{user_id}}
+
+###
+### 4. 상품 목록 조회 (사용자 행동 추적)
+GET {{commerce_base_url}}/api/v1/products
+X-USER-ID: {{user_id}}
+
+###
+### 🎯 주문-결제 이벤트 분리 테스트
+
+### 1. 쿠폰 포함 주문 생성 (이벤트 분리: 주문 생성 → 쿠폰 사용 → 결제 → 데이터 플랫폼)
+POST {{commerce_base_url}}/api/v1/orders
+Content-Type: application/json
+X-USER-ID: {{user_id}}
+
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 1
+    }
+  ],
+  "couponId": null
+}
+
+###
+### 2. 주문 생성 후 상태 변화 확인 (PENDING → COMPLETED/PAYMENT_FAILED)
+GET {{commerce_base_url}}/api/v1/orders
+X-USER-ID: {{user_id}}
+
+###
+### 🔄 결제 실패 → PAYMENT_FAILED 상태 테스트
+
+### 1. 결제 실패 시뮬레이션
+POST {{commerce_base_url}}/api/v1/payments/callback
+Content-Type: application/json
+
+{
+  "transactionId": "TXN-FAILED-TEST",
+  "orderId": "1",
+  "status": "FAILED",
+  "message": "결제 실패 테스트"
+}
+
+###
+### 2. PAYMENT_FAILED 상태 확인
+GET {{commerce_base_url}}/api/v1/orders/1
+
+###
 ### 🔍 상태 확인 및 모니터링
 ###
 
@@ -282,10 +357,21 @@ X-USER-ID: failover-test
 ### ✅ 서킷브레이커 작동 시 즉시 폴백 응답하는지 확인
 ### ✅ 콜백 처리 시 Payment와 Order 상태 동기화 확인
 ### ✅ 스케줄러가 PENDING 결제를 복구하는지 확인 (5분 대기)
+###
+### 🎯 Round 7 Quest 확인 포인트:
+### ✅ 좋아요 등록은 즉시 완료, 집계는 비동기로 처리되는지 확인
+### ✅ 집계 실패해도 좋아요는 정상 완료되는지 확인 (eventual consistency)
+### ✅ 주문 생성 후 쿠폰 사용, 결제, 데이터 플랫폼 전송이 별도 트랜잭션으로 실행되는지 확인
+### ✅ 사용자 행동 추적 이벤트가 비동기로 로깅되는지 확인
+### ✅ 결제 실패 시 PAYMENT_FAILED 상태로 변경되는지 확인 (이전엔 PENDING 유지)
+### ✅ PaymentRecoveryScheduler가 PAYMENT_FAILED 주문을 재시도하지 않는지 확인
 ### 
 ### 🎯 성공 기준:
 ### - 주문 생성: PENDING 상태로 생성
+### - 결제 성공: PENDING → COMPLETED
+### - 결제 실패: PENDING → PAYMENT_FAILED (NEW!)
 ### - PG 연동: 실제 API 호출 및 응답 처리
-### - 콜백 처리: 결제/주문 상태 정확히 업데이트
+### - 이벤트 분리: 메인 로직과 부가 로직이 독립적인 트랜잭션으로 실행
 ### - Resilience: 장애 상황에서도 시스템 안정성 유지
+### - Eventual Consistency: 좋아요 집계가 최종적으로 일관성을 맞추는지 확인
 ###
