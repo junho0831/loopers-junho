@@ -10,6 +10,10 @@ public record ApiResponse<T>(Metadata meta, T data) {
             return new Metadata(Result.SUCCESS, null, null);
         }
 
+        public static Metadata success(String message) {
+            return new Metadata(Result.SUCCESS, null, message);
+        }
+
         public static Metadata fail(String errorCode, String errorMessage) {
             return new Metadata(Result.FAIL, errorCode, errorMessage);
         }
@@ -21,6 +25,10 @@ public record ApiResponse<T>(Metadata meta, T data) {
 
     public static <T> ApiResponse<T> success(T data) {
         return new ApiResponse<>(Metadata.success(), data);
+    }
+
+    public static <T> ApiResponse<T> success(String message, T data) {
+        return new ApiResponse<>(Metadata.success(message), data);
     }
 
     public static ApiResponse<Object> fail(String errorCode, String errorMessage) {
