@@ -19,8 +19,16 @@ public class PaymentService {
         this.paymentRepository = paymentRepository;
     }
 
-    public Payment createPayment(String orderId, Long userId, BigDecimal amount, String cardType, String cardNo) {
-        return new Payment(orderId, userId, amount, cardType, cardNo);
+    public Payment createPayment(String orderId, String userId, BigDecimal amount, String cardType, String cardNo) {
+        // userId를 숫자로 변환할 수 없는 경우 기본값 사용
+        Long userIdLong;
+        try {
+            userIdLong = Long.parseLong(userId);
+        } catch (NumberFormatException e) {
+            log.warn("사용자 ID를 숫자로 변환할 수 없음: {}, 기본값 0 사용", userId);
+            userIdLong = 0L;
+        }
+        return new Payment(orderId, userIdLong, amount, cardType, cardNo);
     }
 
     public Payment savePayment(Payment payment) {
