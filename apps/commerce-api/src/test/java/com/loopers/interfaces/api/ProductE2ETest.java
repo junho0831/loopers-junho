@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import java.util.List;
 import org.springframework.data.domain.Page;
@@ -147,7 +149,7 @@ class ProductE2ETest {
                 new Product("Test Product", new Money(10000), new Stock(10), new Brand("Test Brand")),
                 new Brand("Test Brand")
             );
-            when(productFacade.getProductDetail(testProductId)).thenReturn(mockProductDetail);
+            when(productFacade.getProductDetail(eq(testProductId))).thenReturn(mockProductDetail);
             
             HttpHeaders headers = new HttpHeaders();
             HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
@@ -170,7 +172,7 @@ class ProductE2ETest {
         void getProductDetail_WithNonExistentProductId_ReturnsNotFound() {
             // given
             Long nonExistentProductId = 999L;
-            when(productFacade.getProductDetail(nonExistentProductId))
+            when(productFacade.getProductDetail(eq(nonExistentProductId)))
                     .thenThrow(new CoreException(ErrorType.PRODUCT_NOT_FOUND));
             
             HttpHeaders headers = new HttpHeaders();

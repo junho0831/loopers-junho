@@ -2,10 +2,7 @@ package com.loopers.interfaces.api;
 
 import com.loopers.application.like.LikeFacade;
 import com.loopers.domain.like.ProductLike;
-import com.loopers.domain.product.Product;
-import com.loopers.infrastructure.product.JpaProductRepository;
-import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,39 +13,36 @@ import java.util.List;
 public class LikeController {
 
     private final LikeFacade likeFacade;
-    private final JpaProductRepository productRepository;
 
-    public LikeController(LikeFacade likeFacade,
-            JpaProductRepository productRepository) {
+    public LikeController(LikeFacade likeFacade) {
         this.likeFacade = likeFacade;
-        this.productRepository = productRepository;
     }
 
     @PostMapping("/products/{productId}")
     public ResponseEntity<ApiResponse<Void>> addLike(
             @RequestHeader("X-USER-ID") String userId,
-            @PathVariable Long productId) {
+            @PathVariable Long productId,
+            HttpServletRequest request) {
 
-        // 상품 존재 여부 확인
-        if (!productRepository.existsById(productId)) {
-            throw new CoreException(ErrorType.PRODUCT_NOT_FOUND);
-        }
-
-        likeFacade.addLike(userId, productId);
+        likeFacade.addLike(userId, productId, 
+            request.getSession().getId(),
+            request.getHeader("User-Agent"),
+            getClientIpAddress(request));
+        
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @DeleteMapping("/products/{productId}")
     public ResponseEntity<ApiResponse<Void>> removeLike(
             @RequestHeader("X-USER-ID") String userId,
-            @PathVariable Long productId) {
+            @PathVariable Long productId,
+            HttpServletRequest request) {
 
-        // 상품 존재 여부 확인
-        if (!productRepository.existsById(productId)) {
-            throw new CoreException(ErrorType.PRODUCT_NOT_FOUND);
-        }
-
-        likeFacade.removeLike(userId, productId);
+        likeFacade.removeLike(userId, productId,
+            request.getSession().getId(),
+            request.getHeader("User-Agent"),
+            getClientIpAddress(request));
+        
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
@@ -56,31 +50,39 @@ public class LikeController {
     public ResponseEntity<ApiResponse<List<LikedProductResponse>>> getLikedProducts(
             @RequestHeader("X-USER-ID") String userId) {
 
-        List<LikedProductResponse> response = likeFacade.getLikedProducts(userId)
-                .stream()
-                .map(productLike -> {
-                    Product product = productRepository.findById(productLike.getProductId())
-                            .orElseThrow(() -> new CoreException(ErrorType.PRODUCT_NOT_FOUND));
-                    return new LikedProductResponse(product);
-                })
-                .toList();
-
+        List<LikedProductResponse> response = likeFacade.getLikedProductsWithDetails(userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    public static class LikedProductResponse {
-        private final Product product;
+    private String getClientIpAddress(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isEmpty()) {
+            return xRealIp;
+        }
+        
+        return request.getRemoteAddr();
+    }
 
-        public LikedProductResponse(Product product) {
-            this.product = product;
+    public static class LikedProductResponse {
+        private final Long productId;
+        private final String name;
+
+        public LikedProductResponse(Long productId, String name) {
+            this.productId = productId;
+            this.name = name;
         }
 
         public Long getProductId() {
-            return product.getId();
+            return productId;
         }
 
         public String getName() {
-            return product.getName();
+            return name;
         }
     }
 }

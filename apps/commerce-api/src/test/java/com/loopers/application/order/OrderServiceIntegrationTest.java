@@ -13,10 +13,12 @@ import java.math.BigDecimal;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.coupon.CouponService;
-import com.loopers.infrastructure.order.JpaOrderRepository;
+import com.loopers.domain.payment.PaymentService;
+import com.loopers.domain.payment.PaymentGateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -33,8 +35,6 @@ import static org.mockito.Mockito.doThrow;
 @ExtendWith(MockitoExtension.class)
 class OrderServiceIntegrationTest {
 
-    @Mock
-    private JpaOrderRepository orderRepository;
 
     @Mock
     private ProductService productService;
@@ -47,6 +47,15 @@ class OrderServiceIntegrationTest {
 
     @Mock
     private CouponService couponService;
+    
+    @Mock
+    private PaymentService paymentService;
+    
+    @Mock
+    private PaymentGateway paymentGateway;
+    
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private OrderFacade orderFacade;
@@ -79,7 +88,11 @@ class OrderServiceIntegrationTest {
         when(pointService.loadUserPointsWithLock(testUserId)).thenReturn(testUserPoint);
         when(orderService.calculateTotalAmount(any(), any())).thenReturn(new Money(40000));
         when(orderService.createOrderItems(any(), any())).thenReturn(List.of());
-        when(orderRepository.save(any(Order.class))).thenReturn(new Order(testUserId, List.of(), new Money(40000)));
+        Order mockOrder = Mockito.mock(Order.class);
+        when(mockOrder.getId()).thenReturn(1L);
+        when(mockOrder.getUserId()).thenReturn(testUserId);
+        when(mockOrder.getTotalAmount()).thenReturn(new Money(40000));
+        when(orderService.saveOrder(any(Order.class))).thenReturn(mockOrder);
 
         // when
         Order result = orderFacade.createOrder(testUserId, itemRequests);
@@ -155,7 +168,7 @@ class OrderServiceIntegrationTest {
                 new Order(testUserId, List.of(), new Money(20000))
         );
         
-        when(orderRepository.findByUserId(testUserId)).thenReturn(mockOrders);
+        when(orderService.getUserOrders(testUserId)).thenReturn(mockOrders);
 
         // when
         List<Order> result = orderFacade.getUserOrders(testUserId);
@@ -185,7 +198,7 @@ class OrderServiceIntegrationTest {
         Long orderId = 1L;
         Order mockOrder = new Order(testUserId, List.of(), new Money(10000));
         
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(mockOrder));
+        when(orderService.getOrderById(orderId)).thenReturn(Optional.of(mockOrder));
 
         // when
         var result = orderFacade.getOrderById(orderId);

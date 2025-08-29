@@ -27,4 +27,13 @@ public class PointService {
             throw new IllegalArgumentException("Insufficient points balance.");
         }
     }
+    
+    public Point findByUserId(String userId) {
+        return pointRepository.findByUserId(userId)
+                .orElse(new Point(userId, java.math.BigDecimal.ZERO));
+    }
+    
+    public Point savePoint(Point point) {
+        return pointRepository.save(point);
+    }
 }

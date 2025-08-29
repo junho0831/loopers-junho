@@ -78,4 +78,12 @@ public class CouponService {
         userCoupon.cancelUsage();
         userCouponRepository.save(userCoupon);
     }
+
+    /**
+     * ID로 사용자 쿠폰을 조회합니다.
+     */
+    public UserCoupon findUserCouponById(Long couponId) {
+        return userCouponRepository.findById(couponId)
+                .orElseThrow(() -> new IllegalArgumentException("Coupon not found: " + couponId));
+    }
 }

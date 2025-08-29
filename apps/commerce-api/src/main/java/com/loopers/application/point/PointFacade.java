@@ -1,7 +1,7 @@
 package com.loopers.application.point;
 
 import com.loopers.domain.point.Point;
-import com.loopers.infrastructure.point.JpaPointRepository;
+import com.loopers.domain.point.PointService;
 import java.math.BigDecimal;
 
 import org.springframework.stereotype.Service;
@@ -10,31 +10,31 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class PointFacade {
-    private final JpaPointRepository pointRepository;
+    private final PointService pointService;
 
-    public PointFacade(JpaPointRepository pointRepository) {
-        this.pointRepository = pointRepository;
+    public PointFacade(PointService pointService) {
+        this.pointService = pointService;
     }
 
     public BigDecimal chargePoints(String userId, BigDecimal amount) {
-        Point point = pointRepository.findByUserId(userId)
-                .orElse(new Point(userId, BigDecimal.ZERO));
+        Point point = pointService.findByUserId(userId);
         point.addPoints(amount);
-        Point savedPoint = pointRepository.save(point);
+        Point savedPoint = pointService.savePoint(point);
         return savedPoint.getPointBalance();
     }
 
     public BigDecimal getPoints(String userId) {
-        Point point = pointRepository.findByUserId(userId)
-                .orElse(new Point(userId, BigDecimal.ZERO));
+        Point point = pointService.findByUserId(userId);
         return point.getPointBalance();
     }
 
     public BigDecimal usePoints(String userId, BigDecimal amount) {
-        Point point = pointRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        Point point = pointService.findByUserId(userId);
+        if (point.getPointBalance().equals(BigDecimal.ZERO)) {
+            throw new IllegalArgumentException("User not found");
+        }
         point.deductPoints(amount);
-        Point savedPoint = pointRepository.save(point);
+        Point savedPoint = pointService.savePoint(point);
         return savedPoint.getPointBalance();
     }
 }

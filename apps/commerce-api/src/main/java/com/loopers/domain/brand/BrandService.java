@@ -28,4 +28,8 @@ public class BrandService {
             throw new IllegalArgumentException("Brand not found: " + brandId);
         }
     }
+    
+    public java.util.Optional<Brand> findById(Long brandId) {
+        return brandRepository.findById(brandId);
+    }
 }

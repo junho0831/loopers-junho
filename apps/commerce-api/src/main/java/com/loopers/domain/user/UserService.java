@@ -2,10 +2,13 @@ package com.loopers.domain.user;
 
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
+@Service
 @Transactional
 public class UserService {
 
@@ -42,5 +45,13 @@ public class UserService {
          user.getPoint().charge(chargeAmount);
 
          return user.getPoint().getAmount();
+     }
+     
+     public Optional<User> findByUserId(String userId) {
+         return userRepository.findByUserId(userId);
+     }
+     
+     public User saveUser(User user) {
+         return userRepository.save(user);
      }
 }

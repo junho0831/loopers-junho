@@ -1,7 +1,7 @@
 package com.loopers.application.brand;
 
 import com.loopers.domain.brand.Brand;
-import com.loopers.infrastructure.brand.JpaBrandRepository;
+import com.loopers.domain.brand.BrandService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,13 +11,13 @@ import java.util.Optional;
 @Transactional(readOnly = true)
 public class BrandFacade {
 
-    private final JpaBrandRepository brandRepository;
+    private final BrandService brandService;
 
-    public BrandFacade(JpaBrandRepository brandRepository) {
-        this.brandRepository = brandRepository;
+    public BrandFacade(BrandService brandService) {
+        this.brandService = brandService;
     }
 
     public Optional<Brand> getBrandById(Long brandId) {
-        return brandRepository.findById(brandId);
+        return brandService.findById(brandId);
     }
 }
