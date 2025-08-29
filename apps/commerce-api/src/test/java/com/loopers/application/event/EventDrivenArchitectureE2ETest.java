@@ -137,13 +137,13 @@ class EventDrivenArchitectureE2ETest {
                     .findFirst()
                     .orElseThrow();
             
-            assertThat(payment.getAmount()).isEqualTo(BigDecimal.valueOf(150000L));
+            assertThat(payment.getAmount()).isEqualByComparingTo(BigDecimal.valueOf(150000L));
             assertThat(payment.getUserId()).isEqualTo(0L); // String userId가 파싱되지 않아 기본값
         });
 
         // 4. 포인트 차감 확인 (주문 생성 시 즉시 처리됨)
         Point updatedPoint = pointRepository.findByUserId(testUserId).orElseThrow();
-        assertThat(updatedPoint.getPointBalance()).isEqualTo(BigDecimal.valueOf(1850000)); // 200만 - 15만
+        assertThat(updatedPoint.getPointBalance()).isEqualByComparingTo(BigDecimal.valueOf(1850000)); // 200만 - 15만
     }
 
     @Test
@@ -247,7 +247,7 @@ class EventDrivenArchitectureE2ETest {
 
         // 3. 포인트가 즉시 차감됨 (메인 트랜잭션)
         Point point = pointRepository.findByUserId(testUserId).orElseThrow();
-        assertThat(point.getPointBalance()).isEqualTo(BigDecimal.valueOf(1700000)); // 200만 - 30만
+        assertThat(point.getPointBalance()).isEqualByComparingTo(BigDecimal.valueOf(1700000)); // 200만 - 30만
 
         // 4. 부가 기능들은 별도 트랜잭션에서 비동기 처리됨
         await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
@@ -260,7 +260,7 @@ class EventDrivenArchitectureE2ETest {
                         .orElse(null);
                 
                 if (payment != null) {
-                    assertThat(payment.getAmount()).isEqualTo(BigDecimal.valueOf(300000L));
+                    assertThat(payment.getAmount()).isEqualByComparingTo(BigDecimal.valueOf(300000L));
                 }
             }
         });

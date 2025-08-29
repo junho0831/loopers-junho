@@ -18,6 +18,7 @@ import com.loopers.domain.payment.PaymentGateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -52,6 +53,9 @@ class OrderServiceIntegrationTest {
     
     @Mock
     private PaymentGateway paymentGateway;
+    
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private OrderFacade orderFacade;
@@ -84,7 +88,11 @@ class OrderServiceIntegrationTest {
         when(pointService.loadUserPointsWithLock(testUserId)).thenReturn(testUserPoint);
         when(orderService.calculateTotalAmount(any(), any())).thenReturn(new Money(40000));
         when(orderService.createOrderItems(any(), any())).thenReturn(List.of());
-        when(orderService.saveOrder(any(Order.class))).thenReturn(new Order(testUserId, List.of(), new Money(40000)));
+        Order mockOrder = Mockito.mock(Order.class);
+        when(mockOrder.getId()).thenReturn(1L);
+        when(mockOrder.getUserId()).thenReturn(testUserId);
+        when(mockOrder.getTotalAmount()).thenReturn(new Money(40000));
+        when(orderService.saveOrder(any(Order.class))).thenReturn(mockOrder);
 
         // when
         Order result = orderFacade.createOrder(testUserId, itemRequests);
