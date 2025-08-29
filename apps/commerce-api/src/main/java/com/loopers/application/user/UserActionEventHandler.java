@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.event.TransactionPhase;
 
 import java.util.List;
 
@@ -20,7 +22,7 @@ public class UserActionEventHandler {
         this.actionHandlers = actionHandlers;
     }
     
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Async
     public void handleUserAction(UserActionEvent event) {
         try {

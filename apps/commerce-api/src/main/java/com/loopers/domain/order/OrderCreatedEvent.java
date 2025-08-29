@@ -7,20 +7,27 @@ public class OrderCreatedEvent {
     private final String userId;
     private final BigDecimal totalAmount;
     private final Long couponId;
+    private final String cardCompany;
+    private final String cardNumber;
     
-    public OrderCreatedEvent(Long orderId, String userId, BigDecimal totalAmount, Long couponId) {
+    public OrderCreatedEvent(Long orderId, String userId, BigDecimal totalAmount, Long couponId, 
+                           String cardCompany, String cardNumber) {
         this.orderId = orderId;
         this.userId = userId;
         this.totalAmount = totalAmount;
         this.couponId = couponId;
+        this.cardCompany = cardCompany;
+        this.cardNumber = cardNumber;
     }
     
-    public static OrderCreatedEvent from(Order order, Long couponId) {
+    public static OrderCreatedEvent from(Order order, Long couponId, String cardCompany, String cardNumber) {
         return new OrderCreatedEvent(
             order.getId(),
             order.getUserId(),
             BigDecimal.valueOf(order.getTotalAmount().getValue()),
-            couponId
+            couponId,
+            cardCompany,
+            cardNumber
         );
     }
     
@@ -38,5 +45,13 @@ public class OrderCreatedEvent {
     
     public Long getCouponId() {
         return couponId;
+    }
+    
+    public String getCardCompany() {
+        return cardCompany;
+    }
+    
+    public String getCardNumber() {
+        return cardNumber;
     }
 }

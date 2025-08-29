@@ -34,7 +34,9 @@ public class OrderController {
         Order order = orderFacade.createOrder(userId, request.getItems(), 
             httpRequest.getSession().getId(),
             httpRequest.getHeader("User-Agent"),
-            getClientIpAddress(httpRequest));
+            getClientIpAddress(httpRequest),
+            request.getCardCompany(),
+            request.getCardNumber());
         
         return ResponseEntity.ok(ApiResponse.success(
             "주문이 접수되었습니다. 결제 처리 중입니다...", 
@@ -76,6 +78,8 @@ public class OrderController {
 
     public static class CreateOrderRequest {
         private List<OrderItemRequest> items;
+        private String cardCompany;
+        private String cardNumber;
 
         public List<OrderItemRequest> getItems() {
             return items;
@@ -83,6 +87,22 @@ public class OrderController {
 
         public void setItems(List<OrderItemRequest> items) {
             this.items = items;
+        }
+
+        public String getCardCompany() {
+            return cardCompany;
+        }
+
+        public void setCardCompany(String cardCompany) {
+            this.cardCompany = cardCompany;
+        }
+
+        public String getCardNumber() {
+            return cardNumber;
+        }
+
+        public void setCardNumber(String cardNumber) {
+            this.cardNumber = cardNumber;
         }
     }
 
