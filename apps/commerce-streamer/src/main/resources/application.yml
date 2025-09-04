@@ -1,29 +1,39 @@
 server:
+  port: 8082
   shutdown: graceful
   tomcat:
     threads:
-      max: 200 # 최대 워커 스레드 수 (default : 200)
-      min-spare: 10 # 최소 유지 스레드 수 (default : 10)
-    connection-timeout: 1m # 연결 타임아웃 (ms) (default : 60000ms = 1m)
-    max-connections: 8192 # 최대 동시 연결 수 (default : 8192)
-    accept-count: 100 # 대기 큐 크기 (default : 100)
-    keep-alive-timeout: 60s # 60s
+      max: 200 # 최대 워커 스레드 수 (기본값: 200)
+      min-spare: 10 # 최소 유지 스레드 수 (기본값: 10)
+    connection-timeout: 1m # 연결 타임아웃 (기본값: 60000ms = 1m)
+    max-connections: 8192 # 최대 동시 연결 수 (기본값: 8192)
+    accept-count: 100 # 대기 큐 크기 (기본값: 100)
+    keep-alive-timeout: 60s # 연결 유지 시간: 60초
   max-http-request-header-size: 8KB
 
 spring:
   main:
     web-application-type: servlet
   application:
-    name: commerce-api
+    name: commerce-streamer
   profiles:
     active: local
   config:
     import:
       - jpa.yml
-      - redis.yml
       - kafka.yml
       - logging.yml
-      - monitoring.yml
+  # Redis 설정
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
 
 demo-kafka:
   test:
@@ -56,3 +66,7 @@ spring:
 springdoc:
   api-docs:
     enabled: false
+
+management:
+  endpoints:
+    enabled-by-default: false
