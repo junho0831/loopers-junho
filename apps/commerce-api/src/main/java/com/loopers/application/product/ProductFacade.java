@@ -91,7 +91,7 @@ public class ProductFacade {
         return getProducts(sortType, brandId, pageable);
     }
     
-    // ID로 단일 상품 조회 (PK 인덱스 최적화)
+    // ID로 단일 상품 조회 (기본키 인덱스 최적화)
     @Transactional(readOnly = true)
     public Product getProductById(Long productId) {
         return productService.findByProductId(productId)
@@ -111,9 +111,37 @@ public class ProductFacade {
                 .orElseThrow(() -> new CoreException(ErrorType.PRODUCT_NOT_FOUND));
         product.decreaseStock(quantity);
         productService.saveProduct(product);
+        
+        // 카프카 파이프라인을 위한 재고 조정 이벤트 발행
+        try {
+            eventPublisher.publishEvent(new StockAdjustedEvent(productId, -quantity));
+        } catch (Exception e) {
+            // 로그만 남기고 주요 작업은 실패시키지 않음
+        }
     }
     
-    // === API 전용 메서드들 (Controller에서 호출) ===
+    /**
+     * 카프카 파이프라인용 재고 조정 이벤트
+     */
+    public static class StockAdjustedEvent {
+        private final Long productId;
+        private final int quantityChanged;
+        
+        public StockAdjustedEvent(Long productId, int quantityChanged) {
+            this.productId = productId;
+            this.quantityChanged = quantityChanged;
+        }
+        
+        public Long getProductId() {
+            return productId;
+        }
+        
+        public int getQuantityChanged() {
+            return quantityChanged;
+        }
+    }
+    
+    // === API 전용 메서드들 (컨트롤러에서 호출) ===
     
     @Transactional(readOnly = true)
     public Page<ProductListResponse> getProductsForApi(Long brandId, String sort, int page, int size, String userId, HttpServletRequest request) {
@@ -155,7 +183,7 @@ public class ProductFacade {
         return getProductDetail(productId, userId, sessionId, userAgent, ipAddress);
     }
     
-    // 헬퍼 메서드: IP 주소 추출
+    // 도우미 메서드: IP 주소 추출
     private String getClientIpAddress(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
@@ -170,12 +198,12 @@ public class ProductFacade {
         return request.getRemoteAddr();
     }
     
-    // 헬퍼 메서드: 안전한 이벤트 발행
+    // 도우미 메서드: 안전한 이벤트 발행
     private void publishUserActionEvent(UserActionEvent event) {
         try {
             eventPublisher.publishEvent(event);
         } catch (Exception e) {
-            // 추적 실패해도 메인 비즈니스에는 영향 없음
+            // 추적 실패해도 주요 비즈니스 로직에는 영향 없음
         }
     }
 }
