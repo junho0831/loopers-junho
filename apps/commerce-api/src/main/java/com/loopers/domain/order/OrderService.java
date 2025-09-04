@@ -6,12 +6,21 @@ import com.loopers.domain.point.Point;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
+@Transactional
 public class OrderService {
+    
+    private final OrderRepository orderRepository;
+    
+    public OrderService(OrderRepository orderRepository) {
+        this.orderRepository = orderRepository;
+    }
 
     public void validateProductsStock(List<Product> products, List<OrderItemRequest> itemRequests) {
         for (int i = 0; i < products.size(); i++) {
@@ -60,5 +69,17 @@ public class OrderService {
 
         // 포인트 차감
         userPoints.use(totalAmount);
+    }
+    
+    public Order saveOrder(Order order) {
+        return orderRepository.save(order);
+    }
+    
+    public Optional<Order> getOrderById(Long orderId) {
+        return orderRepository.findById(orderId);
+    }
+    
+    public List<Order> getUserOrders(String userId) {
+        return orderRepository.findByUserId(userId);
     }
 }

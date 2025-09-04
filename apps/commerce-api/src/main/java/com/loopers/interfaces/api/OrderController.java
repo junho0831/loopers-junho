@@ -7,6 +7,7 @@ import com.loopers.domain.order.OrderStatus;
 import com.loopers.domain.order.OrderItem;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,10 +28,20 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<ApiResponse<OrderResponse>> createOrder(
             @RequestHeader("X-USER-ID") String userId,
-            @RequestBody CreateOrderRequest request) {
+            @RequestBody CreateOrderRequest request,
+            HttpServletRequest httpRequest) {
         
-        Order order = orderFacade.createOrder(userId, request.getItems());
-        return ResponseEntity.ok(ApiResponse.success(new OrderResponse(order)));
+        Order order = orderFacade.createOrder(userId, request.getItems(), 
+            httpRequest.getSession().getId(),
+            httpRequest.getHeader("User-Agent"),
+            getClientIpAddress(httpRequest),
+            request.getCardCompany(),
+            request.getCardNumber());
+        
+        return ResponseEntity.ok(ApiResponse.success(
+            "주문이 접수되었습니다. 결제 처리 중입니다...", 
+            new OrderResponse(order)
+        ));
     }
 
     @GetMapping
@@ -50,8 +61,25 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(new OrderResponse(order)));
     }
 
+
+    private String getClientIpAddress(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isEmpty()) {
+            return xRealIp;
+        }
+        
+        return request.getRemoteAddr();
+    }
+
     public static class CreateOrderRequest {
         private List<OrderItemRequest> items;
+        private String cardCompany;
+        private String cardNumber;
 
         public List<OrderItemRequest> getItems() {
             return items;
@@ -59,6 +87,22 @@ public class OrderController {
 
         public void setItems(List<OrderItemRequest> items) {
             this.items = items;
+        }
+
+        public String getCardCompany() {
+            return cardCompany;
+        }
+
+        public void setCardCompany(String cardCompany) {
+            this.cardCompany = cardCompany;
+        }
+
+        public String getCardNumber() {
+            return cardNumber;
+        }
+
+        public void setCardNumber(String cardNumber) {
+            this.cardNumber = cardNumber;
         }
     }
 
@@ -121,4 +165,5 @@ public class OrderController {
             return orderItem != null ? orderItem.calculateTotalPrice().getValue() : 0L;
         }
     }
+
 }

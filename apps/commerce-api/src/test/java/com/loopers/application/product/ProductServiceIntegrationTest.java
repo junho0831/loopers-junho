@@ -7,7 +7,6 @@ import com.loopers.domain.product.Stock;
 import com.loopers.domain.product.ProductSortType;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.ProductService;
-import com.loopers.infrastructure.product.JpaProductRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,8 +33,6 @@ import com.loopers.domain.BaseEntity;
 @ExtendWith(MockitoExtension.class)
 class ProductServiceIntegrationTest {
 
-    @Mock
-    private JpaProductRepository productRepository;
 
     @Mock
     private BrandService brandService;
@@ -82,7 +79,7 @@ class ProductServiceIntegrationTest {
         // given
         Long productId = 1L;
         when(cacheService.getProductDetail(productId)).thenReturn(null); // 캐시 미스 시뮬레이션
-        when(productRepository.findByIdWithBrand(productId)).thenReturn(Optional.of(testProduct1));
+        when(productService.findByIdWithBrand(productId)).thenReturn(testProduct1);
         when(productService.createProductDetail(any(), any())).thenReturn(new com.loopers.domain.product.ProductDetail(testProduct1, testBrand));
 
         // when
@@ -101,11 +98,12 @@ class ProductServiceIntegrationTest {
     void getProductDetail_WithNonExistentProductId_ThrowsException() {
         // given
         Long nonExistentProductId = 999L;
-        when(productRepository.findByIdWithBrand(nonExistentProductId)).thenReturn(Optional.empty());
+        when(cacheService.getProductDetail(nonExistentProductId)).thenReturn(null); // 캐시 미스
+        when(productService.findByIdWithBrand(nonExistentProductId)).thenThrow(new IllegalArgumentException("Product not found: " + nonExistentProductId));
 
         // when & then
         assertThatThrownBy(() -> productFacade.getProductDetail(nonExistentProductId))
-                .isInstanceOf(CoreException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -115,7 +113,7 @@ class ProductServiceIntegrationTest {
         Long brandId = testBrand.getId();
         Pageable pageable = PageRequest.of(0, 10);
         Page<Product> mockPage = new PageImpl<>(List.of(testProduct1, testProduct2), pageable, 2);
-        when(productRepository.findByBrandId(eq(brandId), any(Pageable.class))).thenReturn(mockPage);
+        when(productService.findByBrandId(eq(brandId), any(Pageable.class))).thenReturn(mockPage);
 
         // when
         Page<Product> result = productFacade.getProducts(ProductSortType.LATEST_DESC, brandId, pageable);
@@ -132,7 +130,7 @@ class ProductServiceIntegrationTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<Product> mockPage = new PageImpl<>(List.of(testProduct1, testProduct2), pageable, 2);
-        when(productRepository.findAll(any(Pageable.class))).thenReturn(mockPage);
+        when(productService.findAll(any(Pageable.class))).thenReturn(mockPage);
 
         // when
         Page<Product> result = productFacade.getProducts(ProductSortType.PRICE_ASC, null, pageable);
@@ -155,7 +153,7 @@ class ProductServiceIntegrationTest {
         Long brandId = testBrand.getId();
         
         when(brandService.loadBrand(brandId)).thenReturn(testBrand);
-        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(productService.saveProduct(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
         Product result = productFacade.createProduct(name, price, stock, brandId);
@@ -192,8 +190,7 @@ class ProductServiceIntegrationTest {
         int quantity = 3;
         int originalStock = testProduct1.getStock().getQuantity();
         
-        when(productRepository.findById(productId)).thenReturn(Optional.of(testProduct1));
-        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(productService.findById(productId)).thenReturn(Optional.of(testProduct1));
 
         // when
         productFacade.decreaseProductStock(productId, quantity);
@@ -209,7 +206,7 @@ class ProductServiceIntegrationTest {
         Long productId = 1L;
         int quantity = 15; // 재고보다 많은 수량
         
-        when(productRepository.findById(productId)).thenReturn(Optional.of(testProduct1));
+        when(productService.findById(productId)).thenReturn(Optional.of(testProduct1));
 
         // when & then
         assertThatThrownBy(() -> productFacade.decreaseProductStock(productId, quantity))

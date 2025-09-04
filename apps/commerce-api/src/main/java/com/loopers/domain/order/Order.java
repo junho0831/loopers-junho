@@ -58,6 +58,17 @@ public class Order extends BaseEntity {
         this.status = OrderStatus.CANCELLED;
     }
 
+    public void completePayment() {
+        if (this.status == OrderStatus.PENDING) {
+            this.status = OrderStatus.COMPLETED;
+        }
+    }
+
+    public void failPayment() {
+        // 결제 실패 시 PAYMENT_FAILED 상태로 변경
+        this.status = OrderStatus.PAYMENT_FAILED;
+    }
+
     private void recalculateTotalAmount() {
         this.totalAmount = orderItems.stream()
                 .map(OrderItem::calculateTotalPrice)
@@ -90,5 +101,13 @@ public class Order extends BaseEntity {
 
     public ZonedDateTime getCreatedAt() {
         return super.getCreatedAt();
+    }
+
+    /**
+     * pg-simulator에서 요구하는 6자리 이상의 주문 ID를 생성합니다.
+     * 형식: ORD + 6자리 숫자 (예: ORD000001)
+     */
+    public String getOrderIdForPayment() {
+        return String.format("ORD%06d", this.getId());
     }
 }
