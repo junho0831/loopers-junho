@@ -19,20 +19,20 @@ import java.util.HashMap
 
 @EnableKafka
 @Configuration
-class KafkaConfig {
+open class KafkaConfig {
     companion object {
         const val BATCH_LISTENER = "BATCH_LISTENER_DEFAULT"
 
-        private const val MAX_POLLING_SIZE = 3000 // read 3000 msg
-        private const val FETCH_MIN_BYTES = (1024 * 1024) // 1mb
-        private const val FETCH_MAX_WAIT_MS = 5 * 1000 // broker waiting time = 5s
-        private const val SESSION_TIMEOUT_MS = 60 * 1000 // session timeout = 1m
-        private const val HEARTBEAT_INTERVAL_MS = 20 * 1000 // heartbeat interval = 20s ( 1/3 of session_timeout )
-        private const val MAX_POLL_INTERVAL_MS = 2 * 60 * 1000 // max poll interval = 2m
+        private const val MAX_POLLING_SIZE = 3000 // 단일 폴링에서 읽을 최대 메시지 수: 3000건
+        private const val FETCH_MIN_BYTES = (1024 * 1024) // 최소 페치 크기: 1MB
+        private const val FETCH_MAX_WAIT_MS = 5 * 1000 // 브로커 대기 시간: 5초
+        private const val SESSION_TIMEOUT_MS = 60 * 1000 // 세션 타임아웃: 1분
+        private const val HEARTBEAT_INTERVAL_MS = 20 * 1000 // 하트비트 간격: 20초 (세션 타임아웃의 1/3)
+        private const val MAX_POLL_INTERVAL_MS = 2 * 60 * 1000 // 최대 폴링 간격: 2분
     }
 
     @Bean
-    fun producerFactory(
+    open fun producerFactory(
         kafkaProperties: KafkaProperties,
     ): ProducerFactory<Any, Any> {
         val props: Map<String, Any> = HashMap(kafkaProperties.buildProducerProperties())
@@ -40,7 +40,7 @@ class KafkaConfig {
     }
 
     @Bean
-    fun consumerFactory(
+    open fun consumerFactory(
         kafkaProperties: KafkaProperties,
     ): ConsumerFactory<Any, Any> {
         val props: Map<String, Any> = HashMap(kafkaProperties.buildConsumerProperties())
@@ -48,17 +48,17 @@ class KafkaConfig {
     }
 
     @Bean
-    fun kafkaTemplate(producerFactory: ProducerFactory<Any, Any>): KafkaTemplate<Any, Any> {
+    open fun kafkaTemplate(producerFactory: ProducerFactory<Any, Any>): KafkaTemplate<Any, Any> {
         return KafkaTemplate(producerFactory)
     }
 
     @Bean
-    fun jsonMessageConverter(objectMapper: ObjectMapper): ByteArrayJsonMessageConverter {
+    open fun jsonMessageConverter(objectMapper: ObjectMapper): ByteArrayJsonMessageConverter {
         return ByteArrayJsonMessageConverter(objectMapper)
     }
 
     @Bean(BATCH_LISTENER)
-    fun defaultBatchListenerContainerFactory(
+    open fun defaultBatchListenerContainerFactory(
         kafkaProperties: KafkaProperties,
         converter: ByteArrayJsonMessageConverter,
     ): ConcurrentKafkaListenerContainerFactory<*, *> {

@@ -1,9 +1,9 @@
 spring:
   kafka:
-    bootstrap-servers: ${BOOTSTRAP_SERVERS}
+    bootstrap-servers: ${BOOTSTRAP_SERVERS:localhost:19092}
     client-id: ${spring.application.name}
     properties:
-        spring.json.add.type.headers: false # json serialize off
+        spring.json.add.type.headers: false # JSON 타입 헤더 비활성화
         request.timeout.ms: 20000
         retry.backoff.ms: 500
         auto:
@@ -32,7 +32,7 @@ spring:
     bootstrap-servers: localhost:19092
     admin:
       properties:
-        bootstrap.servers: kafka:9092
+        bootstrap.servers: localhost:19092
 
 ---
 spring.config.activate.on-profile: dev
