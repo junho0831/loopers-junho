@@ -33,6 +33,13 @@ public class OrderEvent {
     public static OrderEvent orderCreated(Long orderId, String userId, BigDecimal totalAmount, 
                                         Long couponId, String cardCompany, String cardNumber,
                                         List<OrderItemData> items) {
+        if (orderId == null) {
+            throw new IllegalArgumentException("orderId is required");
+        }
+        if (totalAmount == null) {
+            throw new IllegalArgumentException("totalAmount is required");
+        }
+        
         OrderEvent event = new OrderEvent();
         event.eventType = "ORDER_CREATED";
         event.orderId = orderId;
@@ -41,12 +48,22 @@ public class OrderEvent {
         event.couponId = couponId;
         event.cardCompany = cardCompany;
         event.cardNumber = cardNumber;
-        event.items = items;
+        event.items = items != null ? items : List.of();
         return event;
     }
 
     public static OrderEvent paymentProcessed(Long orderId, String transactionId, BigDecimal amount,
                                             String paymentStatus, String failureReason) {
+        if (orderId == null) {
+            throw new IllegalArgumentException("orderId is required");
+        }
+        if (transactionId == null) {
+            throw new IllegalArgumentException("transactionId is required");
+        }
+        if (amount == null) {
+            throw new IllegalArgumentException("amount is required");
+        }
+        
         OrderEvent event = new OrderEvent();
         event.eventType = "PAYMENT_PROCESSED";
         event.orderId = orderId;

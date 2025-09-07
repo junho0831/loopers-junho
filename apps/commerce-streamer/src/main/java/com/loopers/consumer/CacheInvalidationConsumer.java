@@ -1,9 +1,11 @@
 package com.loopers.consumer;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.loopers.dto.CatalogEventDto;
 import com.loopers.config.kafka.KafkaConfig;
 import com.loopers.domain.event.EventHandled;
 import com.loopers.service.IdempotentEventService;
+import org.springframework.cache.CacheManager;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,11 +28,14 @@ public class CacheInvalidationConsumer {
     
     private final IdempotentEventService idempotentEventService;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     public CacheInvalidationConsumer(IdempotentEventService idempotentEventService,
-                                   RedisTemplate<String, Object> redisTemplate) {
+                                   RedisTemplate<String, Object> redisTemplate,
+                                   ObjectMapper objectMapper) {
         this.idempotentEventService = idempotentEventService;
         this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
     }
     
     @KafkaListener(
@@ -39,39 +44,38 @@ public class CacheInvalidationConsumer {
         groupId = "cache-invalidation-consumer-group"
     )
     @Transactional
-    public void cacheInvalidationListener(List<ConsumerRecord<String, JsonNode>> messages,
-                                        Acknowledgment acknowledgment) {
-        log.info("Processing {} events for cache invalidation", messages.size());
+    public void handleCacheInvalidation(List<ConsumerRecord<String, String>> records, 
+                                      Acknowledgment acknowledgment) {
+        log.info("Processing {} events for cache invalidation", records.size());
         
         int processedCount = 0;
         int skippedCount = 0;
         
         try {
-            for (ConsumerRecord<String, JsonNode> message : messages) {
-                JsonNode eventData = message.value();
-                String eventId = eventData.has("eventId") ? eventData.get("eventId").asText() : null;
-                String eventType = eventData.has("eventType") ? eventData.get("eventType").asText() : null;
-                Long version = eventData.has("version") ? eventData.get("version").asLong() : null;
+            for (ConsumerRecord<String, String> record : records) {
+                CatalogEventDto event = parseEvent(record.value());
                 
-                if (eventId == null || eventType == null) {
-                    log.warn("Skipping invalid event - missing eventId or eventType: {}", eventData);
+                if (event == null || !event.hasEventId() || !event.hasEventType()) {
+                    log.warn("Skipping invalid event - missing eventId or eventType: {}", record.value());
                     skippedCount++;
                     continue;
                 }
                 
                 boolean processed = idempotentEventService.processEventIdempotent(
-                    eventId,
+                    event.getEventId(),
                     EventHandled.ConsumerType.CACHE_INVALIDATION,
-                    version,
-                    () -> processCacheInvalidationEvent(eventData, eventType)
+                    event.getVersion(),
+                    () -> processCacheInvalidationEvent(event)
                 );
                 
                 if (processed) {
                     processedCount++;
-                    log.debug("Processed cache invalidation for event: eventId={}, eventType={}", eventId, eventType);
+                    log.debug("Processed cache invalidation for event: eventId={}, eventType={}", 
+                        event.getEventId(), event.getEventType());
                 } else {
                     skippedCount++;
-                    log.debug("Skipped duplicate cache invalidation event: eventId={}, eventType={}", eventId, eventType);
+                    log.debug("Skipped duplicate cache invalidation event: eventId={}, eventType={}", 
+                        event.getEventId(), event.getEventType());
                 }
             }
             
@@ -85,12 +89,26 @@ public class CacheInvalidationConsumer {
         }
     }
     
-    private void processCacheInvalidationEvent(JsonNode eventData, String eventType) {
-        Long productId = eventData.has("productId") ? eventData.get("productId").asLong() : null;
-        if (productId == null) {
-            log.warn("Skipping cache invalidation - missing productId in event: {}", eventData);
+    /**
+     * JSON 문자열을 CatalogEventDto로 파싱
+     */
+    private CatalogEventDto parseEvent(String json) {
+        try {
+            return objectMapper.readValue(json, CatalogEventDto.class);
+        } catch (Exception e) {
+            log.error("Failed to parse catalog event: {}", json, e);
+            return null;
+        }
+    }
+    
+    private void processCacheInvalidationEvent(CatalogEventDto event) {
+        if (!event.hasProductId()) {
+            log.warn("Skipping cache invalidation - missing productId in event: {}", event);
             return;
         }
+        
+        Long productId = event.getProductId();
+        String eventType = event.getEventType();
         
         switch (eventType) {
             case "PRODUCT_LIKED":
@@ -100,9 +118,8 @@ public class CacheInvalidationConsumer {
                 break;
                 
             case "STOCK_ADJUSTED":
-                JsonNode stockData = eventData.get("eventData");
-                if (stockData != null && stockData.has("quantity")) {
-                    int quantity = stockData.get("quantity").asInt();
+                if (event.hasQuantity()) {
+                    int quantity = event.getQuantity();
                     // 재고가 0이 되거나 재고가 보충될 때 캐시 무효화
                     if (quantity <= 0) {
                         invalidateProductCache(productId, "Stock depleted");
@@ -111,6 +128,8 @@ public class CacheInvalidationConsumer {
                         invalidateProductCache(productId, "Stock replenished");
                         invalidateProductListCaches(); // 제품이 목록에 다시 포함될 수 있음
                     }
+                } else {
+                    log.warn("STOCK_ADJUSTED event without quantity field: {}", event);
                 }
                 break;
                 

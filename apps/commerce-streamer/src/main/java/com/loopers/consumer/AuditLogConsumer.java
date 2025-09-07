@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * 모든 이벤트를 감사 로그 테이블에 기록하는 컨슈머
- * 처리된 모든 이벤트의 완전한 감사 추적을 제공합니다
+ * 규정 준수를 위한 완전한 감사 추적을 제공합니다
  */
 @Component
 public class AuditLogConsumer {
@@ -27,99 +27,100 @@ public class AuditLogConsumer {
     private static final Logger log = LoggerFactory.getLogger(AuditLogConsumer.class);
     
     private final EventLogRepository eventLogRepository;
-    private final IdempotentEventService idempotentEventService;
     private final ObjectMapper objectMapper;
 
-    public AuditLogConsumer(EventLogRepository eventLogRepository,
-                           IdempotentEventService idempotentEventService,
-                           ObjectMapper objectMapper) {
+    public AuditLogConsumer(EventLogRepository eventLogRepository, ObjectMapper objectMapper) {
         this.eventLogRepository = eventLogRepository;
-        this.idempotentEventService = idempotentEventService;
         this.objectMapper = objectMapper;
     }
     
+    /**
+     * 감사 로그는 모든 이벤트를 무조건 기록해야 하므로 멱등성 처리 없이 단순하게 처리
+     * 중복 기록이 발생해도 감사 추적에는 문제없음 (오히려 더 상세한 추적 가능)
+     */
     @KafkaListener(
         topics = {"catalog-events", "order-events"},
         containerFactory = KafkaConfig.BATCH_LISTENER,
         groupId = "audit-log-consumer-group"
     )
     @Transactional
-    public void auditEventListener(List<ConsumerRecord<String, JsonNode>> messages, 
-                                  Acknowledgment acknowledgment) {
-        log.info("Processing {} events for audit logging", messages.size());
-        
-        int processedCount = 0;
-        int skippedCount = 0;
+    public void handleEvents(List<ConsumerRecord<String, String>> records, 
+                           Acknowledgment acknowledgment) {
+        log.info("Processing {} events for audit logging", records.size());
         
         try {
-            for (ConsumerRecord<String, JsonNode> message : messages) {
-                JsonNode eventData = message.value();
-                String eventId = eventData.has("eventId") ? eventData.get("eventId").asText() : null;
-                String eventType = eventData.has("eventType") ? eventData.get("eventType").asText() : null;
-                Long version = eventData.has("version") ? eventData.get("version").asLong() : null;
-                
-                if (eventId == null || eventType == null) {
-                    log.warn("Skipping invalid event - missing eventId or eventType: {}", eventData);
-                    skippedCount++;
-                    continue;
-                }
-                
-                boolean processed = idempotentEventService.processEventIdempotent(
-                    eventId,
-                    EventHandled.ConsumerType.AUDIT_LOG,
-                    version,
-                    () -> saveEventLog(message, eventId, eventType, eventData, version)
-                );
-                
-                if (processed) {
-                    processedCount++;
-                    log.debug("Audit logged event: eventId={}, eventType={}", eventId, eventType);
-                } else {
-                    skippedCount++;
-                    log.debug("Skipped duplicate event: eventId={}, eventType={}", eventId, eventType);
-                }
-            }
-            
-            // 성공적인 처리 후 수동 확인응답
+            List<EventLog> eventLogs = records.stream()
+                    .map(this::createEventLog)
+                    .toList();
+                    
+            eventLogRepository.saveAll(eventLogs);
             acknowledgment.acknowledge();
-            log.info("Audit log processing completed - processed: {}, skipped: {}", processedCount, skippedCount);
             
+            log.info("Successfully saved {} audit log entries", eventLogs.size());
+
         } catch (Exception e) {
             log.error("Error processing audit log events", e);
             throw e; // 메시지가 재시도되거나 DLQ로 전송됩니다
         }
     }
     
-    private void saveEventLog(ConsumerRecord<String, JsonNode> message, String eventId, 
-                             String eventType, JsonNode eventData, Long version) {
-        String aggregateId = null;
-        switch (message.topic()) {
-            case "catalog-events":
-                aggregateId = eventData.has("productId") ? eventData.get("productId").asText() : null;
-                break;
-            case "order-events":
-                aggregateId = eventData.has("orderId") ? eventData.get("orderId").asText() : null;
-                break;
-        }
-        
+    private EventLog createEventLog(ConsumerRecord<String, String> record) {
         try {
-            EventLog eventLog = new EventLog(
+            // JSON에서 기본 정보 추출
+            JsonNode eventData = objectMapper.readTree(record.value());
+            String eventId = extractEventId(eventData);
+            String eventType = extractEventType(eventData);
+            String aggregateId = extractAggregateId(eventData, record.topic());
+            Long version = extractVersion(eventData);
+            
+            return new EventLog(
                 eventId,
-                eventType,
-                message.topic(),
-                message.key(),
+                eventType, 
+                record.topic(),
+                record.key(),
                 aggregateId,
-                objectMapper.writeValueAsString(eventData),
+                record.value(), // 원본 JSON 문자열 보존
                 ZonedDateTime.now(),
                 version
             );
             
-            eventLogRepository.save(eventLog);
-            log.trace("Event log saved - eventId: {}, topic: {}, partition: {}", 
-                eventId, message.topic(), message.partition());
         } catch (Exception e) {
-            log.error("Failed to save event log for eventId: {}", eventId, e);
-            throw new RuntimeException("Failed to save event log", e);
+            log.error("Failed to parse event record: {}", record, e);
+            // 파싱 실패해도 로그는 남김 (디버깅용)
+            return createFallbackEventLog(record);
         }
+    }
+    
+    private String extractEventId(JsonNode eventData) {
+        return eventData.has("eventId") ? eventData.get("eventId").asText() : "unknown";
+    }
+    
+    private String extractEventType(JsonNode eventData) {
+        return eventData.has("eventType") ? eventData.get("eventType").asText() : "unknown";
+    }
+    
+    private String extractAggregateId(JsonNode eventData, String topic) {
+        return switch (topic) {
+            case "catalog-events" -> eventData.has("productId") ? eventData.get("productId").asText() : null;
+            case "order-events" -> eventData.has("orderId") ? eventData.get("orderId").asText() : null;
+            default -> null;
+        };
+    }
+    
+    private Long extractVersion(JsonNode eventData) {
+        return eventData.has("version") ? eventData.get("version").asLong() : null;
+    }
+    
+    private EventLog createFallbackEventLog(ConsumerRecord<String, String> record) {
+        return new EventLog(
+            "parse-error-" + System.currentTimeMillis(),
+            "PARSE_ERROR",
+            record.topic(),
+            record.key(),
+            null,
+            record.value(),
+            ZonedDateTime.now(),
+            null
+        );
     }
 }
