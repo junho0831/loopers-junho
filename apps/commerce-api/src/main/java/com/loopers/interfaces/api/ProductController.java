@@ -4,6 +4,9 @@ import com.loopers.application.product.ProductFacade;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductDetail;
 import com.loopers.domain.product.ProductSortType;
+import com.loopers.domain.ranking.RankingItem;
+import com.loopers.domain.ranking.RankingKey;
+import com.loopers.domain.ranking.RankingService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import org.springframework.data.domain.Page;
@@ -17,9 +20,11 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController {
 
     private final ProductFacade productFacade;
+    private final RankingService rankingService;
 
-    public ProductController(ProductFacade productFacade) {
+    public ProductController(ProductFacade productFacade, RankingService rankingService) {
         this.productFacade = productFacade;
+        this.rankingService = rankingService;
     }
 
     @GetMapping
@@ -50,9 +55,15 @@ public class ProductController {
     }
 
     @GetMapping("/{productId}")
-    public ResponseEntity<ApiResponse<ProductDetailResponse>> getProduct(@PathVariable Long productId) {
+    public ResponseEntity<ApiResponse<ProductDetailWithRankingResponse>> getProduct(@PathVariable Long productId) {
+        // 기본 상품 상세 조회 (캐시 활용)
         ProductDetailResponse productDetail = productFacade.getProductDetail(productId);
-        return ResponseEntity.ok(ApiResponse.success(productDetail));
+
+        // 오늘 랭킹 조회 (캐시에 얽매이지 않고 실시간 반영)
+        RankingItem rankingItem = rankingService.getProductRanking(RankingKey.todayAll(), productId);
+
+        ProductDetailWithRankingResponse response = ProductDetailWithRankingResponse.from(productDetail, rankingItem);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     public static class ProductListResponse {
