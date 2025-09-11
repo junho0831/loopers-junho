@@ -187,7 +187,8 @@ public class RankingController {
             log.error("Failed to get ranking stats", e);
             return ResponseEntity.internalServerError()
                 .body(new ApiResponse<>(ApiResponse.Metadata.fail("RANKING_ERROR", "Failed to retrieve ranking statistics"), null));
-}
+        }
+    }
 
     // yyyyMMdd 또는 yyyy-MM-dd를 파싱, 미지정 시 오늘 날짜 반환
     private LocalDate parseDateOrToday(String dateStr) {
@@ -204,5 +205,4 @@ public class RankingController {
             return LocalDate.now();
         }
     }
-}
 }
