@@ -47,7 +47,8 @@ public class EventHandled extends BaseEntity {
     public enum ConsumerType {
         AUDIT_LOG,
         METRICS_AGGREGATION,
-        CACHE_INVALIDATION
+        CACHE_INVALIDATION,
+        RANKING
     }
 
     // Getter와 Setter 메서드들
