@@ -6,6 +6,7 @@ import com.loopers.domain.event.EventHandled;
 import com.loopers.domain.metrics.ProductMetrics;
 import com.loopers.repository.ProductMetricsRepository;
 import com.loopers.service.IdempotentEventService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,11 +28,14 @@ public class MetricsAggregationConsumer {
     
     private final ProductMetricsRepository productMetricsRepository;
     private final IdempotentEventService idempotentEventService;
+    private final ObjectMapper objectMapper;
 
     public MetricsAggregationConsumer(ProductMetricsRepository productMetricsRepository,
-                                     IdempotentEventService idempotentEventService) {
+                                     IdempotentEventService idempotentEventService,
+                                     ObjectMapper objectMapper) {
         this.productMetricsRepository = productMetricsRepository;
         this.idempotentEventService = idempotentEventService;
+        this.objectMapper = objectMapper;
     }
     
     @KafkaListener(
@@ -40,16 +44,16 @@ public class MetricsAggregationConsumer {
         groupId = "metrics-aggregation-consumer-group"
     )
     @Transactional
-    public void metricsAggregationListener(List<ConsumerRecord<String, JsonNode>> messages,
-                                          Acknowledgment acknowledgment) {
+    public void metricsAggregationListener(List<ConsumerRecord<String, String>> messages,
+                                          Acknowledgment acknowledgment) throws Exception {
         log.info("Processing {} events for metrics aggregation", messages.size());
         
         int processedCount = 0;
         int skippedCount = 0;
         
         try {
-            for (ConsumerRecord<String, JsonNode> message : messages) {
-                JsonNode eventData = message.value();
+            for (ConsumerRecord<String, String> message : messages) {
+                JsonNode eventData = objectMapper.readTree(message.value());
                 String eventId = eventData.has("eventId") ? eventData.get("eventId").asText() : null;
                 String eventType = eventData.has("eventType") ? eventData.get("eventType").asText() : null;
                 Long version = eventData.has("version") ? eventData.get("version").asLong() : null;

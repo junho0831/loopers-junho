@@ -49,9 +49,14 @@ public class AuditLogConsumer {
         log.info("Processing {} events for audit logging", records.size());
         
         try {
-            List<EventLog> eventLogs = records.stream()
-                    .map(this::createEventLog)
-                    .toList();
+            // 배치 내 중복 eventId는 한 번만 저장하여 유니크 제약 위반으로 전체 롤백되는 것을 방지
+            java.util.LinkedHashMap<String, EventLog> deduped = new java.util.LinkedHashMap<>();
+            for (ConsumerRecord<String, String> record : records) {
+                EventLog logEntry = createEventLog(record);
+                // 동일 eventId가 배치에 여러 개 있을 경우 최초 한 건만 유지
+                deduped.putIfAbsent(logEntry.getEventId(), logEntry);
+            }
+            List<EventLog> eventLogs = new java.util.ArrayList<>(deduped.values());
                     
             eventLogRepository.saveAll(eventLogs);
             acknowledgment.acknowledge();

@@ -2,6 +2,7 @@ package com.loopers.consumer;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.loopers.config.kafka.KafkaConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.event.EventHandled;
 import com.loopers.service.IdempotentEventService;
 import com.loopers.service.RankingService;
@@ -28,11 +29,14 @@ public class RankingConsumer {
     
     private final RankingService rankingService;
     private final IdempotentEventService idempotentEventService;
+    private final ObjectMapper objectMapper;
     
     public RankingConsumer(RankingService rankingService, 
-                          IdempotentEventService idempotentEventService) {
+                          IdempotentEventService idempotentEventService,
+                          ObjectMapper objectMapper) {
         this.rankingService = rankingService;
         this.idempotentEventService = idempotentEventService;
+        this.objectMapper = objectMapper;
     }
     
     @KafkaListener(
@@ -41,8 +45,8 @@ public class RankingConsumer {
         groupId = "ranking-consumer-group"
     )
     @Transactional
-    public void handleRankingEvents(List<ConsumerRecord<String, JsonNode>> messages,
-                                   Acknowledgment acknowledgment) {
+    public void handleRankingEvents(List<ConsumerRecord<String, String>> messages,
+                                   Acknowledgment acknowledgment) throws Exception {
         log.info("Processing {} events for ranking system", messages.size());
         
         int processedCount = 0;
@@ -52,8 +56,8 @@ public class RankingConsumer {
         try {
             LocalDate today = LocalDate.now();
             
-            for (ConsumerRecord<String, JsonNode> message : messages) {
-                JsonNode eventData = message.value();
+            for (ConsumerRecord<String, String> message : messages) {
+                JsonNode eventData = objectMapper.readTree(message.value());
                 String eventId = eventData.has("eventId") ? eventData.get("eventId").asText() : null;
                 String eventType = eventData.has("eventType") ? eventData.get("eventType").asText() : null;
                 Long version = eventData.has("version") ? eventData.get("version").asLong() : null;

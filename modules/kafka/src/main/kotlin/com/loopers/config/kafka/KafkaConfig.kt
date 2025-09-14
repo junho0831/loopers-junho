@@ -2,6 +2,7 @@ package com.loopers.config.kafka
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.producer.ProducerConfig
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -14,7 +15,7 @@ import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.core.ProducerFactory
 import org.springframework.kafka.listener.ContainerProperties
 import org.springframework.kafka.support.converter.BatchMessagingMessageConverter
-import org.springframework.kafka.support.converter.ByteArrayJsonMessageConverter
+import org.springframework.kafka.support.converter.StringJsonMessageConverter
 import java.util.HashMap
 
 @EnableKafka
@@ -34,10 +35,12 @@ open class KafkaConfig {
     @Bean
     open fun producerFactory(
         kafkaProperties: KafkaProperties,
-    ): ProducerFactory<Any, Any> {
+    ): ProducerFactory<String, String> {
         val props: Map<String, Any> = HashMap(kafkaProperties.buildProducerProperties())
         return DefaultKafkaProducerFactory(props)
     }
+
+    // Producer serializers are configured via application YAML
 
     @Bean
     open fun consumerFactory(
@@ -48,19 +51,17 @@ open class KafkaConfig {
     }
 
     @Bean
-    open fun kafkaTemplate(producerFactory: ProducerFactory<Any, Any>): KafkaTemplate<Any, Any> {
-        return KafkaTemplate(producerFactory)
-    }
+    open fun kafkaTemplate(producerFactory: ProducerFactory<String, String>): KafkaTemplate<String, String> =
+        KafkaTemplate(producerFactory)
 
     @Bean
-    open fun jsonMessageConverter(objectMapper: ObjectMapper): ByteArrayJsonMessageConverter {
-        return ByteArrayJsonMessageConverter(objectMapper)
-    }
+    open fun jsonMessageConverter(objectMapper: ObjectMapper): StringJsonMessageConverter =
+        StringJsonMessageConverter(objectMapper)
 
     @Bean(BATCH_LISTENER)
     open fun defaultBatchListenerContainerFactory(
         kafkaProperties: KafkaProperties,
-        converter: ByteArrayJsonMessageConverter,
+        converter: StringJsonMessageConverter,
     ): ConcurrentKafkaListenerContainerFactory<*, *> {
         val consumerConfig = HashMap(kafkaProperties.buildConsumerProperties())
             .apply {

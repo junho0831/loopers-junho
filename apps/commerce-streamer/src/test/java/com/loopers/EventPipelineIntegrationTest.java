@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class EventPipelineIntegrationTest {
 
     @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private KafkaTemplate<String, String> kafkaTemplate;
     
     @Autowired
     private EventLogRepository eventLogRepository;
@@ -68,7 +68,7 @@ class EventPipelineIntegrationTest {
         Map<String, Object> catalogEvent = createCatalogEvent(eventId, "PRODUCT_LIKED", productId, userId);
         
         // When - Kafka로 이벤트 전송
-        kafkaTemplate.send("catalog-events", String.valueOf(productId), catalogEvent);
+        kafkaTemplate.send("catalog-events", String.valueOf(productId), objectMapper.writeValueAsString(catalogEvent));
         
         // Then - Wait for event to be processed by all consumers
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
@@ -98,7 +98,7 @@ class EventPipelineIntegrationTest {
         Map<String, Object> catalogEvent = createCatalogEvent(eventId, "PRODUCT_UNLIKED", productId, userId);
         
         // When - Kafka로 이벤트 전송
-        kafkaTemplate.send("catalog-events", String.valueOf(productId), catalogEvent);
+        kafkaTemplate.send("catalog-events", String.valueOf(productId), objectMapper.writeValueAsString(catalogEvent));
         
         // Then - Wait for event to be processed
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
@@ -125,8 +125,8 @@ class EventPipelineIntegrationTest {
         Map<String, Object> catalogEvent = createCatalogEvent(eventId, "PRODUCT_LIKED", productId, userId);
         
         // When - Send the same event twice
-        kafkaTemplate.send("catalog-events", String.valueOf(productId), catalogEvent);
-        kafkaTemplate.send("catalog-events", String.valueOf(productId), catalogEvent);
+        kafkaTemplate.send("catalog-events", String.valueOf(productId), objectMapper.writeValueAsString(catalogEvent));
+        kafkaTemplate.send("catalog-events", String.valueOf(productId), objectMapper.writeValueAsString(catalogEvent));
         
         // Then - Wait and verify only processed once
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
@@ -145,7 +145,7 @@ class EventPipelineIntegrationTest {
     }
     
     @Test
-    void testEventProcessingStats() {
+    void testEventProcessingStats() throws Exception {
         // Given - Some initial state
         EventTestService.EventProcessingStats initialStats = eventTestService.getProcessingStats();
         
@@ -155,7 +155,7 @@ class EventPipelineIntegrationTest {
         String userId = "user111";
         
         Map<String, Object> catalogEvent = createCatalogEvent(eventId, "PRODUCT_VIEWED", productId, userId);
-        kafkaTemplate.send("catalog-events", String.valueOf(productId), catalogEvent);
+        kafkaTemplate.send("catalog-events", String.valueOf(productId), objectMapper.writeValueAsString(catalogEvent));
         
         // Then - Stats should be updated
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
