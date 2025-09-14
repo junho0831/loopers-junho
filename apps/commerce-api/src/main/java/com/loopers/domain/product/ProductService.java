@@ -82,4 +82,8 @@ public class ProductService {
     public java.util.Optional<Product> findById(Long productId) {
         return productRepository.findById(productId);
     }
+    
+    public List<Product> findAllByIds(java.util.Set<Long> productIds) {
+        return productRepository.findAllById(productIds);
+    }
 }
