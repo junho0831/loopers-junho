@@ -14,7 +14,7 @@ spring:
   main:
     web-application-type: servlet
   application:
-    name: commerce-api
+    name: payment-gateway
   profiles:
     active: local
   config:
@@ -35,7 +35,7 @@ spring:
 datasource:
   mysql-jpa:
     main:
-      jdbc-url: jdbc:mysql://localhost:3306/paymentgateway
+      jdbc-url: jdbc:mysql://localhost:3306/loopers
 
 springdoc:
   use-fqn: true
