@@ -10,7 +10,12 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.annotation.DltHandler;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +48,10 @@ public class RankingConsumer {
         topics = {"catalog-events", "order-events"},
         containerFactory = KafkaConfig.BATCH_LISTENER,
         groupId = "ranking-consumer-group"
+    )
+    @RetryableTopic(
+        attempts = "3",
+        backoff = @Backoff(delay = 1000L, multiplier = 2.0)
     )
     @Transactional
     public void handleRankingEvents(List<ConsumerRecord<String, String>> messages,
@@ -164,5 +173,15 @@ public class RankingConsumer {
                 }
             }
         }
+    }
+
+    @DltHandler
+    public void handleRankingEventsDlt(String payload,
+                                       @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+                                       @Header(KafkaHeaders.ORIGINAL_TOPIC) String originalTopic,
+                                       @Header(KafkaHeaders.ORIGINAL_PARTITION) Integer originalPartition,
+                                       @Header(KafkaHeaders.ORIGINAL_OFFSET) Long originalOffset) {
+        log.error("DLT received for ranking consumer - topic={}, originalTopic={}, partition={}, offset={}, payload={}",
+            topic, originalTopic, originalPartition, originalOffset, payload);
     }
 }

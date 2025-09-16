@@ -16,9 +16,11 @@ import org.springframework.kafka.core.ProducerFactory
 import org.springframework.kafka.listener.ContainerProperties
 import org.springframework.kafka.support.converter.BatchMessagingMessageConverter
 import org.springframework.kafka.support.converter.StringJsonMessageConverter
+import org.springframework.kafka.annotation.EnableKafkaRetryTopic
 import java.util.HashMap
 
 @EnableKafka
+@EnableKafkaRetryTopic
 @Configuration
 open class KafkaConfig {
     companion object {
