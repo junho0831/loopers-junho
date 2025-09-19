@@ -11,6 +11,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.annotation.DltHandler;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +47,10 @@ public class CacheInvalidationConsumer {
         topics = {"catalog-events"},  // 캐시 무효화를 위해 카탈로그 이벤트만 수신
         containerFactory = KafkaConfig.BATCH_LISTENER,
         groupId = "cache-invalidation-consumer-group"
+    )
+    @RetryableTopic(
+        attempts = "3",
+        backoff = @Backoff(delay = 1000L, multiplier = 2.0)
     )
     @Transactional
     public void handleCacheInvalidation(List<ConsumerRecord<String, String>> records, 
@@ -86,6 +95,28 @@ public class CacheInvalidationConsumer {
         } catch (Exception e) {
             log.error("Error processing cache invalidation events", e);
             throw e; // 메시지가 재시도되거나 DLQ로 전송됩니다
+        }
+    }
+
+    @DltHandler
+    public void cacheInvalidationDlt(String payload,
+                                     @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+                                     @Header(KafkaHeaders.ORIGINAL_TOPIC) String originalTopic,
+                                     @Header(KafkaHeaders.ORIGINAL_PARTITION) Integer originalPartition,
+                                     @Header(KafkaHeaders.ORIGINAL_OFFSET) Long originalOffset) {
+        log.error("DLT received for cache invalidation - topic={}, originalTopic={}, partition={}, offset={}, payload={}",
+            topic, originalTopic, originalPartition, originalOffset, payload);
+    }
+
+    @DltHandler
+    public void cacheInvalidationDltBatch(List<ConsumerRecord<String, String>> records,
+                                          @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.error("DLT batch received for cache invalidation - topic={}, size={}", topic, records.size());
+        if (!records.isEmpty()) {
+            ConsumerRecord<String, String> first = records.get(0);
+            log.debug("First record metadata - topic={}, partition={}, offset={}, key={}, valueSnippet={}",
+                first.topic(), first.partition(), first.offset(), first.key(),
+                first.value() != null && first.value().length() > 200 ? first.value().substring(0, 200) + "..." : first.value());
         }
     }
     

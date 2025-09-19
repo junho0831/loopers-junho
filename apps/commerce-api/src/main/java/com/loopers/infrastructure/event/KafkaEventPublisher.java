@@ -18,10 +18,10 @@ public class KafkaEventPublisher {
     private static final String CATALOG_EVENTS_TOPIC = "catalog-events";
     private static final String ORDER_EVENTS_TOPIC = "order-events";
     
-    private final KafkaTemplate<Object, Object> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
-    public KafkaEventPublisher(KafkaTemplate<Object, Object> kafkaTemplate, ObjectMapper objectMapper) {
+    public KafkaEventPublisher(KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper) {
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
     }

@@ -36,10 +36,12 @@ public class RankingController {
      * 일간 랭킹 조회 API
      */
     @GetMapping
-    @Operation(summary = "일간 상품 랭킹 조회", description = "특정 날짜의 상품 랭킹을 페이징으로 조회합니다")
+    @Operation(summary = "상품 랭킹 조회", description = "기간(daily/weekly/monthly)과 날짜를 기준으로 랭킹을 페이징 조회합니다")
     public ResponseEntity<ApiResponse<Page<RankingResponse>>> getDailyRanking(
             @Parameter(description = "조회할 날짜 (yyyyMMdd 또는 YYYY-MM-DD)", example = "20250908")
             @RequestParam(required = false) String date,
+            @Parameter(description = "기간 유형 (daily|weekly|monthly)", example = "daily")
+            @RequestParam(defaultValue = "daily") String period,
             
             @Parameter(description = "페이지 크기", example = "20")
             @RequestParam(defaultValue = "20") 
@@ -53,8 +55,8 @@ public class RankingController {
             // 날짜 파싱 (yyyyMMdd 또는 ISO yyyy-MM-dd 지원)
             LocalDate queryDate = parseDateOrToday(date);
             Pageable pageable = PageRequest.of(page, size);
-            
-            Page<RankingResponse> rankings = rankingFacade.getDailyRanking(queryDate, pageable);
+            RankingFacade.Period p = parsePeriod(period);
+            Page<RankingResponse> rankings = rankingFacade.getRanking(queryDate, p, pageable);
             
             log.info("Retrieved daily ranking for date: {}, page: {}, size: {}, total: {}", 
                 queryDate, page, size, rankings.getTotalElements());
@@ -62,7 +64,7 @@ public class RankingController {
             return ResponseEntity.ok(ApiResponse.success(rankings));
             
         } catch (Exception e) {
-            log.error("Failed to get daily ranking", e);
+            log.error("Failed to get ranking", e);
             return ResponseEntity.internalServerError()
                 .body(new ApiResponse<>(ApiResponse.Metadata.fail("RANKING_ERROR", "Failed to retrieve ranking data"), null));
         }
@@ -116,8 +118,7 @@ public class RankingController {
             
             LocalDate queryDate = parseDateOrToday(date);
             Pageable pageable = PageRequest.of(0, count);
-            
-            Page<RankingResponse> rankings = rankingFacade.getDailyRanking(queryDate, pageable);
+            Page<RankingResponse> rankings = rankingFacade.getRanking(queryDate, RankingFacade.Period.DAILY, pageable);
             
             log.info("Retrieved top {} ranking for date: {}, actual size: {}", 
                 count, queryDate, rankings.getContent().size());
@@ -141,11 +142,14 @@ public class RankingController {
             @PathVariable Long productId,
             
             @Parameter(description = "조회할 날짜 (yyyyMMdd 또는 YYYY-MM-DD)", example = "20250908")
-            @RequestParam(required = false) String date
+            @RequestParam(required = false) String date,
+            @Parameter(description = "기간 유형 (daily|weekly|monthly)", example = "daily")
+            @RequestParam(defaultValue = "daily") String period
     ) {
         try {
             LocalDate queryDate = parseDateOrToday(date);
-            RankingResponse ranking = rankingFacade.getProductRanking(productId, queryDate);
+            RankingFacade.Period p = parsePeriod(period);
+            RankingResponse ranking = rankingFacade.getProductRanking(productId, queryDate, p);
             
             log.info("Retrieved product ranking for productId: {}, date: {}, rank: {}", 
                 productId, queryDate, ranking.getRank());
@@ -204,5 +208,14 @@ public class RankingController {
             // 형식이 잘못된 경우 오늘 날짜 기본값 사용
             return LocalDate.now();
         }
+    }
+
+    private RankingFacade.Period parsePeriod(String period) {
+        if (period == null) return RankingFacade.Period.DAILY;
+        return switch (period.toLowerCase()) {
+            case "weekly" -> RankingFacade.Period.WEEKLY;
+            case "monthly" -> RankingFacade.Period.MONTHLY;
+            default -> RankingFacade.Period.DAILY;
+        };
     }
 }

@@ -2,10 +2,14 @@ package com.loopers.application.ranking;
 
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.ranking.MvProductRankMonthly;
+import com.loopers.domain.ranking.MvProductRankWeekly;
 import com.loopers.domain.ranking.RankingItem;
 import com.loopers.domain.ranking.RankingKey;
 import com.loopers.domain.ranking.RankingService;
 import com.loopers.interfaces.api.RankingResponse;
+import com.loopers.infrastructure.ranking.MvProductRankMonthlyRepository;
+import com.loopers.infrastructure.ranking.MvProductRankWeeklyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -30,10 +34,17 @@ public class RankingFacade {
     
     private final RankingService rankingService;
     private final ProductService productService;
+    private final MvProductRankWeeklyRepository weeklyRepo;
+    private final MvProductRankMonthlyRepository monthlyRepo;
     
-    public RankingFacade(RankingService rankingService, ProductService productService) {
+    public RankingFacade(RankingService rankingService,
+                         ProductService productService,
+                         MvProductRankWeeklyRepository weeklyRepo,
+                         MvProductRankMonthlyRepository monthlyRepo) {
         this.rankingService = rankingService;
         this.productService = productService;
+        this.weeklyRepo = weeklyRepo;
+        this.monthlyRepo = monthlyRepo;
     }
     
     /**
@@ -84,6 +95,62 @@ public class RankingFacade {
             throw new RuntimeException("Failed to retrieve ranking data", e);
         }
     }
+
+    public enum Period { DAILY, WEEKLY, MONTHLY }
+
+    public Page<RankingResponse> getRanking(LocalDate date, Period period, Pageable pageable) {
+        return switch (period) {
+            case DAILY -> getDailyRanking(date, pageable);
+            case WEEKLY -> getWeeklyRanking(date, pageable);
+            case MONTHLY -> getMonthlyRanking(date, pageable);
+        };
+    }
+
+    public Page<RankingResponse> getWeeklyRanking(LocalDate date, Pageable pageable) {
+        try {
+            String yearWeek = YearWeekUtil.toYearWeek(date);
+            var page = weeklyRepo.findByYearWeekOrderByRankAsc(yearWeek, pageable);
+            if (page.isEmpty()) return Page.empty(pageable);
+
+            Set<Long> productIds = page.getContent().stream().map(MvProductRankWeekly::getProductId).collect(Collectors.toSet());
+            Map<Long, Product> productMap = productService.findAllByIds(productIds).stream()
+                    .collect(Collectors.toMap(Product::getId, p -> p));
+
+            List<RankingResponse> responses = page.getContent().stream()
+                    .filter(r -> productMap.containsKey(r.getProductId()))
+                    .map(r -> new RankingResponse(productMap.get(r.getProductId()), new RankingItem(r.getProductId(), r.getScore(), r.getRank().longValue())))
+                    .toList();
+
+            long total = weeklyRepo.countByYearWeek(yearWeek);
+            return new PageImpl<>(responses, pageable, total);
+        } catch (Exception e) {
+            log.error("Failed to get weekly ranking for date: {}", date, e);
+            throw new RuntimeException("Failed to retrieve weekly ranking", e);
+        }
+    }
+
+    public Page<RankingResponse> getMonthlyRanking(LocalDate date, Pageable pageable) {
+        try {
+            String yearMonth = java.time.format.DateTimeFormatter.ofPattern("yyyyMM").format(date);
+            var page = monthlyRepo.findByYearMonthOrderByRankAsc(yearMonth, pageable);
+            if (page.isEmpty()) return Page.empty(pageable);
+
+            Set<Long> productIds = page.getContent().stream().map(MvProductRankMonthly::getProductId).collect(Collectors.toSet());
+            Map<Long, Product> productMap = productService.findAllByIds(productIds).stream()
+                    .collect(Collectors.toMap(Product::getId, p -> p));
+
+            List<RankingResponse> responses = page.getContent().stream()
+                    .filter(r -> productMap.containsKey(r.getProductId()))
+                    .map(r -> new RankingResponse(productMap.get(r.getProductId()), new RankingItem(r.getProductId(), r.getScore(), r.getRank().longValue())))
+                    .toList();
+
+            long total = monthlyRepo.countByYearMonth(yearMonth);
+            return new PageImpl<>(responses, pageable, total);
+        } catch (Exception e) {
+            log.error("Failed to get monthly ranking for date: {}", date, e);
+            throw new RuntimeException("Failed to retrieve monthly ranking", e);
+        }
+    }
     
     /**
      * 오늘의 랭킹 조회
@@ -117,6 +184,32 @@ public class RankingFacade {
             log.error("Failed to get product ranking for productId: {}, date: {}", productId, date, e);
             throw new RuntimeException("Failed to retrieve product ranking", e);
         }
+    }
+
+    public RankingResponse getProductRanking(Long productId, LocalDate date, Period period) {
+        return switch (period) {
+            case DAILY -> getProductRanking(productId, date);
+            case WEEKLY -> getProductWeeklyRanking(productId, date);
+            case MONTHLY -> getProductMonthlyRanking(productId, date);
+        };
+    }
+
+    public RankingResponse getProductWeeklyRanking(Long productId, LocalDate date) {
+        String yearWeek = YearWeekUtil.toYearWeek(date);
+        Product product = productService.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
+        return weeklyRepo.findByYearWeekAndProductId(yearWeek, productId)
+                .map(r -> new RankingResponse(product, new RankingItem(productId, r.getScore(), r.getRank().longValue())))
+                .orElseGet(() -> new RankingResponse(product));
+    }
+
+    public RankingResponse getProductMonthlyRanking(Long productId, LocalDate date) {
+        String yearMonth = java.time.format.DateTimeFormatter.ofPattern("yyyyMM").format(date);
+        Product product = productService.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
+        return monthlyRepo.findByYearMonthAndProductId(yearMonth, productId)
+                .map(r -> new RankingResponse(product, new RankingItem(productId, r.getScore(), r.getRank().longValue())))
+                .orElseGet(() -> new RankingResponse(product));
     }
     
     /**
@@ -164,4 +257,14 @@ public class RankingFacade {
         double maxScore,
         double averageTopScore
     ) {}
+
+    // Helper for ISO week key
+    static class YearWeekUtil {
+        static String toYearWeek(LocalDate date) {
+            var weekFields = java.time.temporal.WeekFields.ISO;
+            int week = date.get(weekFields.weekOfWeekBasedYear());
+            int weekYear = date.get(weekFields.weekBasedYear());
+            return String.format("%dW%02d", weekYear, week);
+        }
+    }
 }

@@ -122,8 +122,15 @@ class OrderE2ETest {
         void createOrder_WithNonExistentProduct_ReturnsNotFound() {
             // given
             Long nonExistentProductId = 999L;
-            when(orderFacade.createOrder(anyString(), any()))
-                    .thenThrow(new IllegalArgumentException("Product not found: " + nonExistentProductId));
+            when(orderFacade.createOrder(
+                    anyString(),
+                    any(),
+                    anyString(),
+                    anyString(),
+                    anyString(),
+                    any(),
+                    any()))
+                .thenThrow(new IllegalArgumentException("Product not found: " + nonExistentProductId));
             
             Map<String, Object> requestBody = Map.of(
                     "items", List.of(Map.of(
@@ -150,8 +157,15 @@ class OrderE2ETest {
         @Test
         void createOrder_WithInsufficientStock_ReturnsBadRequest() {
             // given
-            when(orderFacade.createOrder(anyString(), any()))
-                    .thenThrow(new IllegalArgumentException("Insufficient stock for product: Test Product"));
+            when(orderFacade.createOrder(
+                    anyString(),
+                    any(),
+                    anyString(),
+                    anyString(),
+                    anyString(),
+                    any(),
+                    any()))
+                .thenThrow(new IllegalArgumentException("Insufficient stock for product: Test Product"));
             
             Map<String, Object> requestBody = Map.of(
                     "items", List.of(Map.of(

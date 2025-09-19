@@ -2,6 +2,7 @@ package com.loopers.consumer;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.loopers.config.kafka.KafkaConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.event.EventHandled;
 import com.loopers.service.IdempotentEventService;
 import com.loopers.service.RankingService;
@@ -9,7 +10,12 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.annotation.DltHandler;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,11 +34,14 @@ public class RankingConsumer {
     
     private final RankingService rankingService;
     private final IdempotentEventService idempotentEventService;
+    private final ObjectMapper objectMapper;
     
     public RankingConsumer(RankingService rankingService, 
-                          IdempotentEventService idempotentEventService) {
+                          IdempotentEventService idempotentEventService,
+                          ObjectMapper objectMapper) {
         this.rankingService = rankingService;
         this.idempotentEventService = idempotentEventService;
+        this.objectMapper = objectMapper;
     }
     
     @KafkaListener(
@@ -40,9 +49,13 @@ public class RankingConsumer {
         containerFactory = KafkaConfig.BATCH_LISTENER,
         groupId = "ranking-consumer-group"
     )
+    @RetryableTopic(
+        attempts = "3",
+        backoff = @Backoff(delay = 1000L, multiplier = 2.0)
+    )
     @Transactional
-    public void handleRankingEvents(List<ConsumerRecord<String, JsonNode>> messages,
-                                   Acknowledgment acknowledgment) {
+    public void handleRankingEvents(List<ConsumerRecord<String, String>> messages,
+                                   Acknowledgment acknowledgment) throws Exception {
         log.info("Processing {} events for ranking system", messages.size());
         
         int processedCount = 0;
@@ -52,8 +65,8 @@ public class RankingConsumer {
         try {
             LocalDate today = LocalDate.now();
             
-            for (ConsumerRecord<String, JsonNode> message : messages) {
-                JsonNode eventData = message.value();
+            for (ConsumerRecord<String, String> message : messages) {
+                JsonNode eventData = objectMapper.readTree(message.value());
                 String eventId = eventData.has("eventId") ? eventData.get("eventId").asText() : null;
                 String eventType = eventData.has("eventType") ? eventData.get("eventType").asText() : null;
                 Long version = eventData.has("version") ? eventData.get("version").asLong() : null;
@@ -160,5 +173,15 @@ public class RankingConsumer {
                 }
             }
         }
+    }
+
+    @DltHandler
+    public void handleRankingEventsDlt(String payload,
+                                       @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+                                       @Header(KafkaHeaders.ORIGINAL_TOPIC) String originalTopic,
+                                       @Header(KafkaHeaders.ORIGINAL_PARTITION) Integer originalPartition,
+                                       @Header(KafkaHeaders.ORIGINAL_OFFSET) Long originalOffset) {
+        log.error("DLT received for ranking consumer - topic={}, originalTopic={}, partition={}, offset={}, payload={}",
+            topic, originalTopic, originalPartition, originalOffset, payload);
     }
 }
