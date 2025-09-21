@@ -1,8 +1,4 @@
-plugins {
-    kotlin("jvm") version "2.0.20"
-    kotlin("kapt") version "2.0.20" 
-    kotlin("plugin.jpa") version "2.0.20"
-}
+plugins {}
 
 dependencies {
     // 추가 모듈
@@ -20,8 +16,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-cache")
 
-    // 쿼리 DSL
-    kapt("com.querydsl:querydsl-apt::jakarta")
+    // (removed kapt/querydsl-apt; not used in Java-only streamer)
 
     // 테스트 픽스처
     testImplementation(testFixtures(project(":modules:jpa")))

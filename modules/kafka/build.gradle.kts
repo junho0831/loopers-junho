@@ -1,8 +1,6 @@
 plugins {
     `java-library`
     `java-test-fixtures`
-    kotlin("jvm") version "2.0.20"
-    kotlin("plugin.spring") version "2.0.20"
 }
 
 dependencies {
