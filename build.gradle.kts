@@ -60,7 +60,7 @@ subprojects {
         // testcontainers:mysql 이 jdbc 사용함
         testRuntimeOnly("com.mysql:mysql-connector-j")
         testImplementation("org.springframework.boot:spring-boot-starter-test")
-        testImplementation("com.ninja-squad:springmockk:${project.properties["springMockkVersion"]}")
+        // removed springmockk (kotlin-specific test lib) as codebase uses Java
         testImplementation("org.mockito:mockito-core:${project.properties["mockitoVersion"]}")
         testImplementation("org.instancio:instancio-junit:${project.properties["instancioJUnitVersion"]}")
         // Testcontainers
