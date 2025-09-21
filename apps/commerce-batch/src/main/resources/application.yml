@@ -1,0 +1,28 @@
+server:
+  shutdown: graceful
+
+spring:
+  application:
+    name: commerce-batch
+  profiles:
+    active: local
+  config:
+    import:
+      - jpa.yml
+      - logging.yml
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local, test
+  jpa:
+    hibernate:
+      ddl-auto: none
+  batch:
+    jdbc:
+      initialize-schema: always
+
+management:
+  server:
+    port: 8085

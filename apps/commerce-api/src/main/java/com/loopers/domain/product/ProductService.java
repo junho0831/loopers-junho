@@ -86,4 +86,7 @@ public class ProductService {
     public List<Product> findAllByIds(java.util.Set<Long> productIds) {
         return productRepository.findAllById(productIds);
     }
+    public boolean existsById(Long productId) {
+        return productRepository.existsById(productId);
+    }
 }

@@ -31,8 +31,8 @@ public class LikeFacade {
     public ProductLike addLike(String userId, Long productId, String sessionId, String userAgent, String ipAddress) {
         System.out.println("DEBUG: LikeFacade.addLike called - userId: " + userId + ", productId: " + productId);
         
-        // 상품 존재 여부 확인 (도메인 서비스 사용)
-        if (productService.findById(productId).isEmpty()) {
+        // 상품 존재 여부만 확인하여 영속성 컨텍스트에 미리 로드되지 않도록 한다
+        if (!productService.existsById(productId)) {
             throw new CoreException(ErrorType.PRODUCT_NOT_FOUND);
         }
 
@@ -52,8 +52,8 @@ public class LikeFacade {
     }
 
     public void removeLike(String userId, Long productId, String sessionId, String userAgent, String ipAddress) {
-        // 상품 존재 여부 확인 (도메인 서비스 사용)
-        if (productService.findById(productId).isEmpty()) {
+        // 상품 존재 여부만 확인하여 영속성 컨텍스트에 미리 로드되지 않도록 한다
+        if (!productService.existsById(productId)) {
             throw new CoreException(ErrorType.PRODUCT_NOT_FOUND);
         }
 
